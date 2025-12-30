@@ -538,9 +538,9 @@ td.text-right {
 }
 
 .date-picker-nav {
-    background: var(--primary);
-    color: white;
-    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
     border-radius: 0.25rem;
     width: 2rem;
     height: 2rem;
@@ -549,10 +549,12 @@ td.text-right {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.15s, border-color 0.15s;
 }
 
 .date-picker-nav:hover {
-    background: var(--primary-hover);
+    background: var(--bg-secondary);
+    border-color: var(--text-secondary);
 }
 
 .calendar-weekdays {
