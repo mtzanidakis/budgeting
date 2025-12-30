@@ -57,7 +57,7 @@ function showDatePicker(inputId) {
             state.datePicker.currentMonth = parseInt(month) - 1;
         }
     }
-    render();
+    renderDatePicker();
 }
 
 function hideDatePicker(event) {
@@ -66,7 +66,10 @@ function hideDatePicker(event) {
     }
     state.datePicker.visible = false;
     state.datePicker.targetInput = null;
-    render();
+    const existingPicker = document.getElementById('date-picker-root');
+    if (existingPicker) {
+        existingPicker.remove();
+    }
 }
 
 function selectDate(day) {
@@ -93,7 +96,23 @@ function changeMonth(offset) {
         state.datePicker.currentMonth = 0;
         state.datePicker.currentYear++;
     }
-    render();
+    renderDatePicker();
+}
+
+function renderDatePicker() {
+    // Remove existing picker if any
+    const existingPicker = document.getElementById('date-picker-root');
+    if (existingPicker) {
+        existingPicker.remove();
+    }
+
+    // Add new picker if visible
+    if (state.datePicker.visible) {
+        const pickerDiv = document.createElement('div');
+        pickerDiv.id = 'date-picker-root';
+        pickerDiv.innerHTML = DatePicker();
+        document.body.appendChild(pickerDiv);
+    }
 }
 
 function DatePicker() {
@@ -488,12 +507,6 @@ function closeModal(event) {
 function render() {
     const app = document.getElementById('app');
     app.innerHTML = state.user ? Dashboard() : LoginPage();
-
-    // Add date picker if visible
-    if (state.datePicker.visible) {
-        app.innerHTML += DatePicker();
-    }
-
     applyTheme();
 }
 
