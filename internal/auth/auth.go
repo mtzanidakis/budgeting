@@ -24,8 +24,8 @@ func ComparePassword(hash, password string) error {
 
 // GenerateRandomPassword generates a random password of the specified length
 func GenerateRandomPassword(length int) (string, error) {
-	if length < 16 {
-		length = 16
+	if length < 6 {
+		length = 6
 	}
 
 	bytes := make([]byte, length)

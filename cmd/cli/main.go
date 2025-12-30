@@ -96,8 +96,8 @@ func handleUserAdd(db *database.DB) {
 		fmt.Printf("Generated password: %s\n", plainPassword)
 		fmt.Println("Please save this password securely. It will not be shown again.")
 	} else {
-		if len(password) < 16 {
-			log.Fatal("Password must be at least 16 characters")
+		if len(password) < 6 {
+			log.Fatal("Password must be at least 6 characters")
 		}
 		var err error
 		hashedPassword, err = auth.HashPassword(password)
@@ -132,8 +132,8 @@ func handleUserEdit(db *database.DB) {
 	var newName *string
 
 	if password != "" {
-		if len(password) < 16 {
-			log.Fatal("Password must be at least 16 characters")
+		if len(password) < 6 {
+			log.Fatal("Password must be at least 6 characters")
 		}
 		hashed, err := auth.HashPassword(password)
 		if err != nil {

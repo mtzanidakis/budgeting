@@ -107,7 +107,7 @@ docker-compose logs -f
 ```bash
 ./bin/cli user:add -username <username> -name <display-name>
 ```
-- Prompts for password (16+ characters required)
+- Prompts for password (6+ characters required)
 - Leave password empty to generate a random one
 
 #### Edit User

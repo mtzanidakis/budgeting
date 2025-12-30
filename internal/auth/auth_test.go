@@ -41,17 +41,17 @@ func TestComparePassword(t *testing.T) {
 }
 
 func TestGenerateRandomPassword(t *testing.T) {
-	// Test with length < 16
-	password, err := GenerateRandomPassword(10)
+	// Test with length < 6
+	password, err := GenerateRandomPassword(3)
 	if err != nil {
 		t.Fatalf("GenerateRandomPassword failed: %v", err)
 	}
 
-	if len(password) < 16 {
-		t.Fatalf("Password length should be at least 16, got %d", len(password))
+	if len(password) < 6 {
+		t.Fatalf("Password length should be at least 6, got %d", len(password))
 	}
 
-	// Test with length >= 16
+	// Test with length >= 6
 	password, err = GenerateRandomPassword(20)
 	if err != nil {
 		t.Fatalf("GenerateRandomPassword failed: %v", err)
