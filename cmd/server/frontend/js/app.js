@@ -23,19 +23,20 @@ function formatDateForDisplay(isoDate) {
     return `${day}/${month}/${year}`;
 }
 
-function formatDateForInput(isoDate) {
-    // Convert ISO date to YYYY-MM-DD for input type="date"
-    if (!isoDate) return '';
-    return isoDate.split('T')[0];
+function formatDateToISO(displayDate) {
+    // Convert DD/MM/YYYY to YYYY-MM-DD for API
+    if (!displayDate) return '';
+    const [day, month, year] = displayDate.split('/');
+    return `${year}-${month}-${day}`;
 }
 
-function getTodayISO() {
-    // Get today's date in YYYY-MM-DD format for input type="date"
+function getTodayFormatted() {
+    // Get today's date in DD/MM/YYYY format
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${day}/${month}/${year}`;
 }
 
 // API helpers
@@ -113,8 +114,8 @@ async function loadActions() {
     const params = new URLSearchParams();
     if (state.filters.username) params.append('username', state.filters.username);
     if (state.filters.type) params.append('type', state.filters.type);
-    if (state.filters.date_from) params.append('date_from', state.filters.date_from);
-    if (state.filters.date_to) params.append('date_to', state.filters.date_to);
+    if (state.filters.date_from) params.append('date_from', formatDateToISO(state.filters.date_from));
+    if (state.filters.date_to) params.append('date_to', formatDateToISO(state.filters.date_to));
 
     const data = await api(`/api/actions?${params}`);
     if (data) {
@@ -240,11 +241,11 @@ function Filters() {
                 </div>
                 <div class="form-group">
                     <label>From Date</label>
-                    <input type="date" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" class="input">
+                    <input type="text" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}">
                 </div>
                 <div class="form-group">
                     <label>To Date</label>
-                    <input type="date" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" class="input">
+                    <input type="text" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}">
                 </div>
             </div>
         </div>
@@ -298,7 +299,7 @@ function ActionsList() {
 }
 
 function AddActionModal() {
-    const today = getTodayISO();
+    const today = getTodayFormatted();
     return `
         <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()">
@@ -316,7 +317,7 @@ function AddActionModal() {
                     </div>
                     <div class="form-group">
                         <label>Date</label>
-                        <input type="date" id="action-date" value="${today}" class="input" required>
+                        <input type="text" id="action-date" value="${today}" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" required>
                     </div>
                     <div class="form-group">
                         <label>Description</label>
@@ -348,7 +349,7 @@ async function handleAddAction(event) {
     event.preventDefault();
     const actionData = {
         type: document.getElementById('action-type').value,
-        date: document.getElementById('action-date').value,
+        date: formatDateToISO(document.getElementById('action-date').value),
         description: document.getElementById('action-description').value,
         amount: parseFloat(document.getElementById('action-amount').value)
     };
