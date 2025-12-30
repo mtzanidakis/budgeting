@@ -60,7 +60,10 @@ function showDatePicker(inputId) {
     render();
 }
 
-function hideDatePicker() {
+function hideDatePicker(event) {
+    if (event) {
+        event.stopPropagation();
+    }
     state.datePicker.visible = false;
     state.datePicker.targetInput = null;
     render();
@@ -117,16 +120,16 @@ function DatePicker() {
     for (let day = 1; day <= daysInMonth; day++) {
         const isToday = isCurrentMonth && today.getDate() === day;
         const classes = `calendar-day${isToday ? ' today' : ''}`;
-        calendarDays += `<div class="${classes}" onclick="selectDate(${day})">${day}</div>`;
+        calendarDays += `<div class="${classes}" onclick="selectDate(${day}); event.stopPropagation();">${day}</div>`;
     }
 
     return `
-        <div class="date-picker-overlay" onclick="hideDatePicker()">
+        <div class="date-picker-overlay" onclick="hideDatePicker(event)">
             <div class="date-picker" onclick="event.stopPropagation()">
                 <div class="date-picker-header">
-                    <button onclick="changeMonth(-1)" class="date-picker-nav">&lt;</button>
+                    <button onclick="changeMonth(-1); event.stopPropagation();" class="date-picker-nav">&lt;</button>
                     <span class="date-picker-title">${monthNames[state.datePicker.currentMonth]} ${state.datePicker.currentYear}</span>
-                    <button onclick="changeMonth(1)" class="date-picker-nav">&gt;</button>
+                    <button onclick="changeMonth(1); event.stopPropagation();" class="date-picker-nav">&gt;</button>
                 </div>
                 <div class="calendar-weekdays">
                     <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
