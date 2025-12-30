@@ -15,26 +15,27 @@ const state = {
 
 // Date formatting helpers
 function formatDateForDisplay(isoDate) {
-    // Convert YYYY-MM-DD to DD/MM/YYYY
+    // Convert YYYY-MM-DD or ISO timestamp to DD/MM/YYYY
     if (!isoDate) return '';
-    const [year, month, day] = isoDate.split('-');
+    // Handle ISO timestamps by taking only the date part
+    const datePart = isoDate.split('T')[0];
+    const [year, month, day] = datePart.split('-');
     return `${day}/${month}/${year}`;
 }
 
-function formatDateForAPI(displayDate) {
-    // Convert DD/MM/YYYY to YYYY-MM-DD
-    if (!displayDate) return '';
-    const [day, month, year] = displayDate.split('/');
-    return `${year}-${month}-${day}`;
+function formatDateForInput(isoDate) {
+    // Convert ISO date to YYYY-MM-DD for input type="date"
+    if (!isoDate) return '';
+    return isoDate.split('T')[0];
 }
 
-function getTodayFormatted() {
-    // Get today's date in DD/MM/YYYY format
+function getTodayISO() {
+    // Get today's date in YYYY-MM-DD format for input type="date"
     const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
     const year = today.getFullYear();
-    return `${day}/${month}/${year}`;
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 // API helpers
@@ -112,8 +113,8 @@ async function loadActions() {
     const params = new URLSearchParams();
     if (state.filters.username) params.append('username', state.filters.username);
     if (state.filters.type) params.append('type', state.filters.type);
-    if (state.filters.date_from) params.append('date_from', formatDateForAPI(state.filters.date_from));
-    if (state.filters.date_to) params.append('date_to', formatDateForAPI(state.filters.date_to));
+    if (state.filters.date_from) params.append('date_from', state.filters.date_from);
+    if (state.filters.date_to) params.append('date_to', state.filters.date_to);
 
     const data = await api(`/api/actions?${params}`);
     if (data) {
@@ -239,11 +240,11 @@ function Filters() {
                 </div>
                 <div class="form-group">
                     <label>From Date</label>
-                    <input type="text" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}">
+                    <input type="date" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" class="input">
                 </div>
                 <div class="form-group">
                     <label>To Date</label>
-                    <input type="text" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}">
+                    <input type="date" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" class="input">
                 </div>
             </div>
         </div>
@@ -297,7 +298,7 @@ function ActionsList() {
 }
 
 function AddActionModal() {
-    const today = getTodayFormatted();
+    const today = getTodayISO();
     return `
         <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()">
@@ -315,7 +316,7 @@ function AddActionModal() {
                     </div>
                     <div class="form-group">
                         <label>Date</label>
-                        <input type="text" id="action-date" value="${today}" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" required>
+                        <input type="date" id="action-date" value="${today}" class="input" required>
                     </div>
                     <div class="form-group">
                         <label>Description</label>
@@ -345,10 +346,9 @@ function handleLogin(event) {
 
 async function handleAddAction(event) {
     event.preventDefault();
-    const dateInput = document.getElementById('action-date').value;
     const actionData = {
         type: document.getElementById('action-type').value,
-        date: formatDateForAPI(dateInput),
+        date: document.getElementById('action-date').value,
         description: document.getElementById('action-description').value,
         amount: parseFloat(document.getElementById('action-amount').value)
     };
