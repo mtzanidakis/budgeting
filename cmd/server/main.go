@@ -53,6 +53,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(db, sessionStore)
 	actionsHandler := handlers.NewActionsHandler(db)
 	usersHandler := handlers.NewUsersHandler(db)
+	configHandler := handlers.NewConfigHandler(cfg.Currency)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -62,6 +63,7 @@ func main() {
 
 	// Public routes
 	r.Post("/api/login", authHandler.Login)
+	r.Get("/api/config", configHandler.GetConfig)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {

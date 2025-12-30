@@ -9,7 +9,8 @@ const state = {
         date_from: '',
         date_to: ''
     },
-    theme: localStorage.getItem('theme') || 'light'
+    theme: localStorage.getItem('theme') || 'light',
+    currency: '€'
 };
 
 // API helpers
@@ -101,6 +102,13 @@ async function loadUsers() {
     const data = await api('/api/users');
     if (data) {
         state.users = data;
+    }
+}
+
+async function loadConfig() {
+    const data = await api('/api/config');
+    if (data && data.currency) {
+        state.currency = data.currency;
     }
 }
 
@@ -253,7 +261,7 @@ function ActionsList() {
                                 </td>
                                 <td>${action.description}</td>
                                 <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
-                                    ${action.type === 'income' ? '+' : '-'}$${action.amount.toFixed(2)}
+                                    ${action.type === 'income' ? '+' : '-'}${state.currency}${action.amount.toFixed(2)}
                                 </td>
                             </tr>
                         `).join('')}
@@ -364,7 +372,7 @@ document.addEventListener('click', (e) => {
 
 // Initial render
 applyTheme();
-render();
+loadConfig().then(() => render());
 
 // Register service worker
 if ('serviceWorker' in navigator) {

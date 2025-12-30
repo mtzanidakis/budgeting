@@ -169,6 +169,7 @@ docker-compose logs -f
 | `DATABASE_PATH` | No | `./data/budgeting.db` | SQLite database file path |
 | `SESSION_SECRET` | **Yes** | - | Secret key for session encryption |
 | `LOG_LEVEL` | No | `info` | Logging level |
+| `CURRENCY` | No | `€` | Currency symbol to display |
 
 ## Database Schema
 

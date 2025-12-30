@@ -9,6 +9,7 @@ type Config struct {
 	DatabasePath   string `env:"DATABASE_PATH" envDefault:"./data/budgeting.db"`
 	SessionSecret  string `env:"SESSION_SECRET,required"`
 	LogLevel       string `env:"LOG_LEVEL" envDefault:"info"`
+	Currency       string `env:"CURRENCY" envDefault:"€"`
 }
 
 func Load() (*Config, error) {
