@@ -517,11 +517,12 @@ td.text-right {
 }
 
 .date-picker {
-    background: var(--card-bg);
+    background: var(--bg-card);
     border-radius: 0.5rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     padding: 1rem;
     min-width: 280px;
+    border: 1px solid var(--border-color);
 }
 
 .date-picker-header {
@@ -533,11 +534,11 @@ td.text-right {
 
 .date-picker-title {
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--text-primary);
 }
 
 .date-picker-nav {
-    background: var(--primary-color);
+    background: var(--primary);
     color: white;
     border: none;
     border-radius: 0.25rem;
@@ -551,7 +552,7 @@ td.text-right {
 }
 
 .date-picker-nav:hover {
-    opacity: 0.8;
+    background: var(--primary-hover);
 }
 
 .calendar-weekdays {
@@ -565,7 +566,7 @@ td.text-right {
     text-align: center;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     padding: 0.25rem;
 }
 
@@ -583,12 +584,12 @@ td.text-right {
     border-radius: 0.25rem;
     cursor: pointer;
     font-size: 0.875rem;
-    color: var(--text-color);
+    color: var(--text-primary);
     transition: background-color 0.15s;
 }
 
 .calendar-day:not(.empty):hover {
-    background: var(--primary-color);
+    background: var(--primary);
     color: white;
 }
 
