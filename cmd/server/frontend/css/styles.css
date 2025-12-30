@@ -587,12 +587,13 @@ td.text-right {
     cursor: pointer;
     font-size: 0.875rem;
     color: var(--text-primary);
-    transition: background-color 0.15s;
+    transition: background-color 0.15s, color 0.15s;
 }
 
 .calendar-day:not(.empty):hover {
-    background: var(--primary);
-    color: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 .calendar-day.empty {
