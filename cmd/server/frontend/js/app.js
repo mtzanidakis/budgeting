@@ -1,0 +1,374 @@
+// State management
+const state = {
+    user: null,
+    actions: [],
+    users: [],
+    filters: {
+        username: '',
+        type: '',
+        date_from: '',
+        date_to: ''
+    },
+    theme: localStorage.getItem('theme') || 'light'
+};
+
+// API helpers
+async function api(endpoint, options = {}) {
+    try {
+        const response = await fetch(endpoint, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
+            credentials: 'same-origin'
+        });
+
+        if (response.status === 401) {
+            state.user = null;
+            render();
+            return null;
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('API Error:', error);
+        return null;
+    }
+}
+
+// Theme management
+function applyTheme() {
+    if (state.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+}
+
+function toggleTheme() {
+    state.theme = state.theme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme', state.theme);
+    applyTheme();
+}
+
+// Auth
+async function login(username, password) {
+    const data = await api('/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password })
+    });
+
+    console.log('Login response:', data);
+
+    if (data && data.success) {
+        state.user = data.user;
+        await loadActions();
+        await loadUsers();
+        render();
+    } else {
+        const errorMsg = data?.message || 'Login failed. Please check your credentials.';
+        console.error('Login failed:', errorMsg, data);
+        alert(errorMsg);
+    }
+}
+
+async function logout() {
+    await api('/api/logout', { method: 'POST' });
+    state.user = null;
+    state.actions = [];
+    state.users = [];
+    render();
+}
+
+// Data loading
+async function loadActions() {
+    const params = new URLSearchParams();
+    if (state.filters.username) params.append('username', state.filters.username);
+    if (state.filters.type) params.append('type', state.filters.type);
+    if (state.filters.date_from) params.append('date_from', state.filters.date_from);
+    if (state.filters.date_to) params.append('date_to', state.filters.date_to);
+
+    const data = await api(`/api/actions?${params}`);
+    if (data) {
+        state.actions = data;
+        render();
+    }
+}
+
+async function loadUsers() {
+    const data = await api('/api/users');
+    if (data) {
+        state.users = data;
+    }
+}
+
+async function createAction(actionData) {
+    const data = await api('/api/actions', {
+        method: 'POST',
+        body: JSON.stringify(actionData)
+    });
+
+    if (data && data.id) {
+        await loadActions();
+        return true;
+    }
+    return false;
+}
+
+// Components
+function LoginPage() {
+    return `
+        <div class="login-container">
+            <div class="card login-card">
+                <div class="login-header">
+                    <h1>Budgeting App</h1>
+                    <button onclick="toggleTheme()" class="icon-btn">
+                        ${state.theme === 'light' ? '🌙' : '☀️'}
+                    </button>
+                </div>
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="username" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" class="input" required>
+                    </div>
+                    <div class="form-group mt-4">
+                        <button type="submit" class="btn btn-primary w-full">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function Dashboard() {
+    return `
+        <div>
+            <header>
+                <div class="header-content">
+                    <h1>Budgeting</h1>
+                    <div class="header-right">
+                        <button onclick="toggleTheme()" class="icon-btn">
+                            ${state.theme === 'light' ? '🌙' : '☀️'}
+                        </button>
+                        <div class="user-menu">
+                            <button onclick="toggleUserMenu()" class="user-menu-trigger">
+                                <span>${state.user?.name || 'User'}</span>
+                                <span>▼</span>
+                            </button>
+                            <div id="user-menu" class="user-menu-dropdown hidden">
+                                <button onclick="logout()">Logout</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="dashboard-main">
+                <div class="container">
+                    ${Filters()}
+                    ${ActionsList()}
+                </div>
+            </main>
+
+            <button class="floating-button" onclick="openAddActionModal()">+</button>
+            <div id="modal-container"></div>
+        </div>
+    `;
+}
+
+function Filters() {
+    return `
+        <div class="card filters-card mb-6">
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label>User</label>
+                    <select onchange="updateFilter('username', this.value)" class="input">
+                        <option value="">All Users</option>
+                        ${state.users.map(u => `
+                            <option value="${u.username}" ${state.filters.username === u.username ? 'selected' : ''}>
+                                ${u.name}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select onchange="updateFilter('type', this.value)" class="input">
+                        <option value="">All</option>
+                        <option value="income" ${state.filters.type === 'income' ? 'selected' : ''}>Income</option>
+                        <option value="expense" ${state.filters.type === 'expense' ? 'selected' : ''}>Expense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>From Date</label>
+                    <input type="date" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" class="input">
+                </div>
+                <div class="form-group">
+                    <label>To Date</label>
+                    <input type="date" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" class="input">
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function ActionsList() {
+    if (state.actions.length === 0) {
+        return `
+            <div class="card empty-state">
+                <p class="empty-state-title">No actions yet</p>
+                <p class="empty-state-text">Click the + button to add your first action</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${state.actions.map(action => `
+                            <tr>
+                                <td>${action.date}</td>
+                                <td>${action.name}</td>
+                                <td>
+                                    <span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">
+                                        ${action.type}
+                                    </span>
+                                </td>
+                                <td>${action.description}</td>
+                                <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
+                                    ${action.type === 'income' ? '+' : '-'}$${action.amount.toFixed(2)}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function AddActionModal() {
+    const today = new Date().toISOString().split('T')[0];
+    return `
+        <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2>Add Action</h2>
+                    <button onclick="closeModal()" class="modal-close">&times;</button>
+                </div>
+                <form onsubmit="handleAddAction(event)">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="action-type" class="input">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="action-date" value="${today}" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="action-description" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" id="action-amount" step="0.01" min="0.01" class="input" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Add Action</button>
+                        <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+// Event handlers
+function handleLogin(event) {
+    event.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    login(username, password);
+}
+
+async function handleAddAction(event) {
+    event.preventDefault();
+    const actionData = {
+        type: document.getElementById('action-type').value,
+        date: document.getElementById('action-date').value,
+        description: document.getElementById('action-description').value,
+        amount: parseFloat(document.getElementById('action-amount').value)
+    };
+
+    if (await createAction(actionData)) {
+        closeModal();
+    } else {
+        alert('Failed to create action');
+    }
+}
+
+function updateFilter(key, value) {
+    state.filters[key] = value;
+    loadActions();
+}
+
+function toggleUserMenu() {
+    const menu = document.getElementById('user-menu');
+    menu.classList.toggle('hidden');
+}
+
+function openAddActionModal() {
+    document.getElementById('modal-container').innerHTML = AddActionModal();
+}
+
+function closeModal(event) {
+    if (!event || event.target.classList.contains('modal-overlay')) {
+        document.getElementById('modal-container').innerHTML = '';
+    }
+}
+
+// Render
+function render() {
+    const app = document.getElementById('app');
+    app.innerHTML = state.user ? Dashboard() : LoginPage();
+    applyTheme();
+}
+
+// Close user menu when clicking outside
+document.addEventListener('click', (e) => {
+    const userMenu = document.getElementById('user-menu');
+    if (userMenu && !e.target.closest('.user-menu')) {
+        userMenu.classList.add('hidden');
+    }
+});
+
+// Initial render
+applyTheme();
+render();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
