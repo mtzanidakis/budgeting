@@ -231,6 +231,16 @@ async function logout() {
     render();
 }
 
+async function checkSession() {
+    const data = await api('/api/me');
+    if (data && data.success && data.user) {
+        state.user = data.user;
+        await loadActions();
+        await loadUsers();
+    }
+    render();
+}
+
 // Data loading
 async function loadActions() {
     const params = new URLSearchParams();
@@ -520,7 +530,7 @@ document.addEventListener('click', (e) => {
 
 // Initial render
 applyTheme();
-loadConfig().then(() => render());
+loadConfig().then(() => checkSession());
 
 // Register service worker
 if ('serviceWorker' in navigator) {

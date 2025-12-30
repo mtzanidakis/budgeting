@@ -69,6 +69,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Auth(sessionStore))
 
+		r.Get("/api/me", authHandler.Me)
 		r.Post("/api/logout", authHandler.Logout)
 		r.Get("/api/actions", actionsHandler.List)
 		r.Post("/api/actions", actionsHandler.Create)

@@ -116,6 +116,39 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		respondJSON(w, http.StatusUnauthorized, LoginResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	user, err := h.db.GetUserByUsername(username)
+	if err != nil {
+		respondJSON(w, http.StatusUnauthorized, LoginResponse{
+			Success: false,
+			Message: "User not found",
+		})
+		return
+	}
+
+	respondJSON(w, http.StatusOK, LoginResponse{
+		Success: true,
+		User: &struct {
+			ID       int64  `json:"id"`
+			Username string `json:"username"`
+			Name     string `json:"name"`
+		}{
+			ID:       user.ID,
+			Username: user.Username,
+			Name:     user.Name,
+		},
+	})
+}
+
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
