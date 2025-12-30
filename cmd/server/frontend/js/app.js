@@ -200,6 +200,7 @@ function toggleTheme() {
     state.theme = state.theme === 'light' ? 'dark' : 'light';
     localStorage.setItem('theme', state.theme);
     applyTheme();
+    render();
 }
 
 // Auth
