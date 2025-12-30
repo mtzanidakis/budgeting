@@ -10,7 +10,13 @@ const state = {
         date_to: ''
     },
     theme: localStorage.getItem('theme') || 'light',
-    currency: '€'
+    currency: '€',
+    datePicker: {
+        visible: false,
+        targetInput: null,
+        currentMonth: new Date().getMonth(),
+        currentYear: new Date().getFullYear()
+    }
 };
 
 // Date formatting helpers
@@ -37,6 +43,100 @@ function getTodayFormatted() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${day}/${month}/${year}`;
+}
+
+// Date picker helpers
+function showDatePicker(inputId) {
+    state.datePicker.targetInput = inputId;
+    state.datePicker.visible = true;
+    const input = document.getElementById(inputId);
+    if (input && input.value) {
+        const [day, month, year] = input.value.split('/');
+        if (year && month) {
+            state.datePicker.currentYear = parseInt(year);
+            state.datePicker.currentMonth = parseInt(month) - 1;
+        }
+    }
+    render();
+}
+
+function hideDatePicker() {
+    state.datePicker.visible = false;
+    state.datePicker.targetInput = null;
+    render();
+}
+
+function selectDate(day) {
+    const month = String(state.datePicker.currentMonth + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const dateStr = `${dayStr}/${month}/${state.datePicker.currentYear}`;
+
+    const input = document.getElementById(state.datePicker.targetInput);
+    if (input) {
+        input.value = dateStr;
+        // Trigger change event
+        const event = new Event('change', { bubbles: true });
+        input.dispatchEvent(event);
+    }
+    hideDatePicker();
+}
+
+function changeMonth(offset) {
+    state.datePicker.currentMonth += offset;
+    if (state.datePicker.currentMonth < 0) {
+        state.datePicker.currentMonth = 11;
+        state.datePicker.currentYear--;
+    } else if (state.datePicker.currentMonth > 11) {
+        state.datePicker.currentMonth = 0;
+        state.datePicker.currentYear++;
+    }
+    render();
+}
+
+function DatePicker() {
+    if (!state.datePicker.visible) return '';
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+
+    const firstDay = new Date(state.datePicker.currentYear, state.datePicker.currentMonth, 1).getDay();
+    const daysInMonth = new Date(state.datePicker.currentYear, state.datePicker.currentMonth + 1, 0).getDate();
+
+    const today = new Date();
+    const isCurrentMonth = today.getMonth() === state.datePicker.currentMonth &&
+                          today.getFullYear() === state.datePicker.currentYear;
+
+    let calendarDays = '';
+
+    // Empty cells for days before the first day of month
+    for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
+        calendarDays += '<div class="calendar-day empty"></div>';
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = isCurrentMonth && today.getDate() === day;
+        const classes = `calendar-day${isToday ? ' today' : ''}`;
+        calendarDays += `<div class="${classes}" onclick="selectDate(${day})">${day}</div>`;
+    }
+
+    return `
+        <div class="date-picker-overlay" onclick="hideDatePicker()">
+            <div class="date-picker" onclick="event.stopPropagation()">
+                <div class="date-picker-header">
+                    <button onclick="changeMonth(-1)" class="date-picker-nav">&lt;</button>
+                    <span class="date-picker-title">${monthNames[state.datePicker.currentMonth]} ${state.datePicker.currentYear}</span>
+                    <button onclick="changeMonth(1)" class="date-picker-nav">&gt;</button>
+                </div>
+                <div class="calendar-weekdays">
+                    <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                </div>
+                <div class="calendar-days">
+                    ${calendarDays}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // API helpers
@@ -241,11 +341,11 @@ function Filters() {
                 </div>
                 <div class="form-group">
                     <label>From Date</label>
-                    <input type="text" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}">
+                    <input type="text" id="filter-date-from" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" onclick="showDatePicker('filter-date-from')" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
                 </div>
                 <div class="form-group">
                     <label>To Date</label>
-                    <input type="text" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}">
+                    <input type="text" id="filter-date-to" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" onclick="showDatePicker('filter-date-to')" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
                 </div>
             </div>
         </div>
@@ -317,7 +417,7 @@ function AddActionModal() {
                     </div>
                     <div class="form-group">
                         <label>Date</label>
-                        <input type="text" id="action-date" value="${today}" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" required>
+                        <input type="text" id="action-date" value="${today}" onclick="showDatePicker('action-date')" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" readonly required>
                     </div>
                     <div class="form-group">
                         <label>Description</label>
@@ -385,6 +485,12 @@ function closeModal(event) {
 function render() {
     const app = document.getElementById('app');
     app.innerHTML = state.user ? Dashboard() : LoginPage();
+
+    // Add date picker if visible
+    if (state.datePicker.visible) {
+        app.innerHTML += DatePicker();
+    }
+
     applyTheme();
 }
 
