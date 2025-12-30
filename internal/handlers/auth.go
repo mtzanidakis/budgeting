@@ -6,6 +6,7 @@ import (
 
 	"github.com/manolis/budgeting/internal/auth"
 	"github.com/manolis/budgeting/internal/database"
+	"github.com/manolis/budgeting/internal/middleware"
 )
 
 type AuthHandler struct {
@@ -117,7 +118,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	username, ok := r.Context().Value("username").(string)
+	session, ok := middleware.GetSession(r)
 	if !ok {
 		respondJSON(w, http.StatusUnauthorized, LoginResponse{
 			Success: false,
@@ -126,7 +127,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.db.GetUserByUsername(username)
+	user, err := h.db.GetUserByUsername(session.Username)
 	if err != nil {
 		respondJSON(w, http.StatusUnauthorized, LoginResponse{
 			Success: false,
