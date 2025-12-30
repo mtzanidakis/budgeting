@@ -380,6 +380,9 @@ function Filters() {
                     <label>To Date</label>
                     <input type="text" id="filter-date-to" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" onclick="showDatePicker('filter-date-to')" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
                 </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                    <button onclick="clearFilters()" class="btn btn-secondary" style="width: 100%;">Clear Filters</button>
+                </div>
             </div>
         </div>
     `;
@@ -497,6 +500,17 @@ async function handleAddAction(event) {
 function updateFilter(key, value) {
     state.filters[key] = value;
     loadActions();
+}
+
+function clearFilters() {
+    state.filters = {
+        username: '',
+        type: '',
+        date_from: '',
+        date_to: ''
+    };
+    loadActions();
+    render();
 }
 
 function toggleUserMenu() {
