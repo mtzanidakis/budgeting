@@ -5,7 +5,7 @@ import (
 )
 
 type Config struct {
-	Port           string `env:"PORT" envDefault:"8080"`
+	Port           string `env:"PORT" envDefault:"4666"`
 	DatabasePath   string `env:"DATABASE_PATH" envDefault:"./data/budgeting.db"`
 	SessionSecret  string `env:"SESSION_SECRET,required"`
 	LogLevel       string `env:"LOG_LEVEL" envDefault:"info"`
