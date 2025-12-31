@@ -94,6 +94,15 @@ body {
     background-color: var(--border-color);
 }
 
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
 /* Forms */
 .input,
 select.input {
@@ -321,6 +330,15 @@ tbody tr:hover {
 
 tbody tr:last-child {
     border-bottom: none;
+}
+
+.action-row-editable {
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.action-row-editable:hover {
+    background-color: var(--bg-secondary);
 }
 
 td {

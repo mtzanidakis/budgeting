@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/manolis/budgeting/internal/database"
 	"github.com/manolis/budgeting/internal/middleware"
 	"github.com/manolis/budgeting/internal/models"
@@ -20,6 +21,13 @@ func NewActionsHandler(db *database.DB) *ActionsHandler {
 }
 
 type CreateActionRequest struct {
+	Type        string  `json:"type"`
+	Date        string  `json:"date"`
+	Description string  `json:"description"`
+	Amount      float64 `json:"amount"`
+}
+
+type UpdateActionRequest struct {
 	Type        string  `json:"type"`
 	Date        string  `json:"date"`
 	Description string  `json:"description"`
@@ -251,5 +259,112 @@ func (h *ActionsHandler) GetChartData(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, ChartDataResponse{
 		Year: year,
 		Data: data,
+	})
+}
+
+func (h *ActionsHandler) Update(w http.ResponseWriter, r *http.Request) {
+	session, ok := middleware.GetSession(r)
+	if !ok {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	actionIDStr := chi.URLParam(r, "id")
+	actionID, err := strconv.ParseInt(actionIDStr, 10, 64)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid action ID",
+		})
+		return
+	}
+
+	var req UpdateActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	// Validate request
+	if req.Type != "income" && req.Type != "expense" {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Type must be 'income' or 'expense'",
+		})
+		return
+	}
+
+	if req.Description == "" {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Description is required",
+		})
+		return
+	}
+
+	if req.Amount <= 0 {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Amount must be positive",
+		})
+		return
+	}
+
+	actionType := models.ActionTypeExpense
+	if req.Type == "income" {
+		actionType = models.ActionTypeIncome
+	}
+
+	action, err := h.db.UpdateAction(actionID, session.UserID, actionType, req.Date, req.Description, req.Amount)
+	if err != nil {
+		respondJSON(w, http.StatusNotFound, map[string]string{
+			"error": "Action not found or not owned by user",
+		})
+		return
+	}
+
+	user, _ := h.db.GetUserByID(action.UserID)
+
+	respondJSON(w, http.StatusOK, ActionResponse{
+		ID:          action.ID,
+		UserID:      action.UserID,
+		Username:    user.Username,
+		Name:        user.Name,
+		Type:        string(action.Type),
+		Date:        action.Date,
+		Description: action.Description,
+		Amount:      action.Amount,
+		CreatedAt:   action.CreatedAt.Format(time.RFC3339),
+	})
+}
+
+func (h *ActionsHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	session, ok := middleware.GetSession(r)
+	if !ok {
+		respondJSON(w, http.StatusUnauthorized, map[string]string{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	actionIDStr := chi.URLParam(r, "id")
+	actionID, err := strconv.ParseInt(actionIDStr, 10, 64)
+	if err != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid action ID",
+		})
+		return
+	}
+
+	err = h.db.DeleteAction(actionID, session.UserID)
+	if err != nil {
+		respondJSON(w, http.StatusNotFound, map[string]string{
+			"error": "Action not found or not owned by user",
+		})
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{
+		"message": "Action deleted successfully",
 	})
 }

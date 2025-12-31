@@ -181,3 +181,70 @@ func (db *DB) GetMonthlySummary(year int) ([]MonthlySummary, error) {
 
 	return summaries, nil
 }
+
+func (db *DB) GetActionByID(actionID int64) (*models.Action, error) {
+	var action models.Action
+	err := db.QueryRow(
+		"SELECT id, user_id, type, date, description, amount, created_at, updated_at FROM actions WHERE id = ?",
+		actionID,
+	).Scan(
+		&action.ID, &action.UserID, &action.Type, &action.Date,
+		&action.Description, &action.Amount, &action.CreatedAt, &action.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get action: %w", err)
+	}
+
+	return &action, nil
+}
+
+func (db *DB) UpdateAction(actionID, userID int64, actionType models.ActionType, date, description string, amount float64) (*models.Action, error) {
+	now := time.Now()
+	result, err := db.Exec(
+		"UPDATE actions SET type = ?, date = ?, description = ?, amount = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+		actionType, date, description, amount, now, actionID, userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update action: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return nil, fmt.Errorf("action not found or not owned by user")
+	}
+
+	return &models.Action{
+		ID:          actionID,
+		UserID:      userID,
+		Type:        actionType,
+		Date:        date,
+		Description: description,
+		Amount:      amount,
+		UpdatedAt:   now,
+	}, nil
+}
+
+func (db *DB) DeleteAction(actionID, userID int64) error {
+	result, err := db.Exec(
+		"DELETE FROM actions WHERE id = ? AND user_id = ?",
+		actionID, userID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete action: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("action not found or not owned by user")
+	}
+
+	return nil
+}

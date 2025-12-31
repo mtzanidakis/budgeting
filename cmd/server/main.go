@@ -74,6 +74,8 @@ func main() {
 		r.Put("/api/profile", usersHandler.UpdateProfile)
 		r.Get("/api/actions", actionsHandler.List)
 		r.Post("/api/actions", actionsHandler.Create)
+		r.Put("/api/actions/{id}", actionsHandler.Update)
+		r.Delete("/api/actions/{id}", actionsHandler.Delete)
 		r.Get("/api/charts/monthly", actionsHandler.GetChartData)
 		r.Get("/api/users", usersHandler.List)
 	})

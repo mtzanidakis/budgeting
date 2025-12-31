@@ -50,12 +50,16 @@ const translations = {
 
         // Add Action Modal
         'modal.add_action': 'Add Action',
+        'modal.edit_action': 'Edit Action',
         'modal.type': 'Type',
         'modal.date': 'Date',
         'modal.description': 'Description',
         'modal.amount': 'Amount',
         'modal.submit': 'Add Action',
+        'modal.save': 'Save Changes',
+        'modal.delete': 'Delete',
         'modal.cancel': 'Cancel',
+        'modal.delete_confirm': 'Are you sure you want to delete this action? This cannot be undone.',
 
         // Charts
         'charts.title': 'Monthly Income & Expenses',
@@ -85,6 +89,8 @@ const translations = {
         'validation.success': 'Profile updated successfully',
         'validation.error': 'Failed to update profile',
         'validation.failed_create': 'Failed to create action',
+        'validation.failed_update': 'Failed to update action',
+        'validation.failed_delete': 'Failed to delete action',
 
         // Pagination
         'pagination.previous': 'Previous',
@@ -149,12 +155,16 @@ const translations = {
 
         // Add Action Modal
         'modal.add_action': 'Προσθήκη Κίνησης',
+        'modal.edit_action': 'Επεξεργασία Κίνησης',
         'modal.type': 'Τύπος',
         'modal.date': 'Ημερομηνία',
         'modal.description': 'Περιγραφή',
         'modal.amount': 'Ποσό',
         'modal.submit': 'Προσθήκη Κίνησης',
+        'modal.save': 'Αποθήκευση Αλλαγών',
+        'modal.delete': 'Διαγραφή',
         'modal.cancel': 'Ακύρωση',
+        'modal.delete_confirm': 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κίνηση; Αυτό δεν μπορεί να αναιρεθεί.',
 
         // Charts
         'charts.title': 'Μηνιαία Έσοδα & Έξοδα',
@@ -184,6 +194,8 @@ const translations = {
         'validation.success': 'Το προφίλ ενημερώθηκε επιτυχώς',
         'validation.error': 'Αποτυχία ενημέρωσης προφίλ',
         'validation.failed_create': 'Αποτυχία δημιουργίας κίνησης',
+        'validation.failed_update': 'Αποτυχία ενημέρωσης κίνησης',
+        'validation.failed_delete': 'Αποτυχία διαγραφής κίνησης',
 
         // Pagination
         'pagination.previous': 'Προηγούμενο',

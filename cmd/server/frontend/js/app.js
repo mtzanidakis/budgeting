@@ -45,6 +45,10 @@ const state = {
         targetInput: null,
         currentMonth: new Date().getMonth(),
         currentYear: new Date().getFullYear()
+    },
+    editActionModal: {
+        visible: false,
+        action: null
     }
 };
 
@@ -323,6 +327,37 @@ async function createAction(actionData) {
     return false;
 }
 
+async function updateAction(actionId, actionData) {
+    const data = await api(`/api/actions/${actionId}`, {
+        method: 'PUT',
+        body: JSON.stringify(actionData)
+    });
+
+    if (data && data.id) {
+        await loadActions();
+        if (state.currentPage === 'all-actions') {
+            await loadAllActions();
+        }
+        return true;
+    }
+    return false;
+}
+
+async function deleteAction(actionId) {
+    const data = await api(`/api/actions/${actionId}`, {
+        method: 'DELETE'
+    });
+
+    if (data) {
+        await loadActions();
+        if (state.currentPage === 'all-actions') {
+            await loadAllActions();
+        }
+        return true;
+    }
+    return false;
+}
+
 // Components
 function LoginPage() {
     return `
@@ -554,7 +589,7 @@ function AllActionsTable() {
                     </thead>
                     <tbody>
                         ${actions.map(action => `
-                            <tr>
+                            <tr class="${action.user_id === state.user.id ? 'action-row-editable' : ''}" ${action.user_id === state.user.id ? `onclick="openEditActionModal(${action.id})"` : ''}>
                                 <td>${formatDateForDisplay(action.date)}</td>
                                 <td>${action.name}</td>
                                 <td><span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">${action.type === 'income' ? t('filters.income') : t('filters.expense')}</span></td>
@@ -932,7 +967,7 @@ function ActionsList() {
                     </thead>
                     <tbody>
                         ${state.actions.map(action => `
-                            <tr>
+                            <tr class="${action.user_id === state.user.id ? 'action-row-editable' : ''}" ${action.user_id === state.user.id ? `onclick="openEditActionModal(${action.id})"` : ''}>
                                 <td>${formatDateForDisplay(action.date)}</td>
                                 <td>${action.name}</td>
                                 <td>
@@ -992,6 +1027,50 @@ function AddActionModal() {
     `;
 }
 
+function EditActionModal() {
+    const action = state.editActionModal.action;
+    if (!action) return '';
+
+    const displayDate = formatDateForDisplay(action.date);
+
+    return `
+        <div class="modal-overlay" onclick="closeEditModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2>${t('modal.edit_action')}</h2>
+                    <button onclick="closeEditModal()" class="modal-close">&times;</button>
+                </div>
+                <form onsubmit="handleEditAction(event)">
+                    <div class="form-group">
+                        <label>${t('modal.type')}</label>
+                        <select id="edit-action-type" class="input">
+                            <option value="expense" ${action.type === 'expense' ? 'selected' : ''}>${t('filters.expense')}</option>
+                            <option value="income" ${action.type === 'income' ? 'selected' : ''}>${t('filters.income')}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>${t('modal.date')}</label>
+                        <input type="text" id="edit-action-date" value="${displayDate}" onclick="showDatePicker('edit-action-date')" class="input" placeholder="${t('date_format')}" pattern="\\d{2}/\\d{2}/\\d{4}" readonly required>
+                    </div>
+                    <div class="form-group">
+                        <label>${t('modal.description')}</label>
+                        <input type="text" id="edit-action-description" value="${action.description}" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>${t('modal.amount')}</label>
+                        <input type="number" id="edit-action-amount" step="0.01" min="0.01" value="${action.amount}" class="input" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">${t('modal.save')}</button>
+                        <button type="button" onclick="handleDeleteAction(${action.id})" class="btn btn-danger">${t('modal.delete')}</button>
+                        <button type="button" onclick="closeEditModal()" class="btn btn-secondary">${t('modal.cancel')}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
 // Event handlers
 function handleLogin(event) {
     event.preventDefault();
@@ -1013,6 +1092,62 @@ async function handleAddAction(event) {
         closeModal();
     } else {
         alert(t('validation.failed_create'));
+    }
+}
+
+function openEditActionModal(actionId) {
+    // Find the action in state
+    let action = state.actions.find(a => a.id === actionId);
+    if (!action) {
+        action = state.allActionsPage.actions.find(a => a.id === actionId);
+    }
+
+    if (action) {
+        state.editActionModal = {
+            visible: true,
+            action: action
+        };
+        document.getElementById('modal-container').innerHTML = EditActionModal();
+    }
+}
+
+function closeEditModal(event) {
+    if (event && event.target !== event.currentTarget) {
+        return;
+    }
+    state.editActionModal = {
+        visible: false,
+        action: null
+    };
+    document.getElementById('modal-container').innerHTML = '';
+}
+
+async function handleEditAction(event) {
+    event.preventDefault();
+
+    const actionData = {
+        type: document.getElementById('edit-action-type').value,
+        date: formatDateToISO(document.getElementById('edit-action-date').value),
+        description: document.getElementById('edit-action-description').value,
+        amount: parseFloat(document.getElementById('edit-action-amount').value)
+    };
+
+    if (await updateAction(state.editActionModal.action.id, actionData)) {
+        closeEditModal();
+    } else {
+        alert(t('validation.failed_update'));
+    }
+}
+
+async function handleDeleteAction(actionId) {
+    if (!confirm(t('modal.delete_confirm'))) {
+        return;
+    }
+
+    if (await deleteAction(actionId)) {
+        closeEditModal();
+    } else {
+        alert(t('validation.failed_delete'));
     }
 }
 
