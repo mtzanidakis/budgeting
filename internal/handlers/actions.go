@@ -43,6 +43,17 @@ type PaginatedActionsResponse struct {
 	Total   int              `json:"total"`
 }
 
+type MonthlyChartData struct {
+	Month   string  `json:"month"`
+	Income  float64 `json:"income"`
+	Expense float64 `json:"expense"`
+}
+
+type ChartDataResponse struct {
+	Year int                `json:"year"`
+	Data []MonthlyChartData `json:"data"`
+}
+
 func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -192,5 +203,53 @@ func (h *ActionsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Description: action.Description,
 		Amount:      action.Amount,
 		CreatedAt:   action.CreatedAt.Format(time.RFC3339),
+	})
+}
+
+func (h *ActionsHandler) GetChartData(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	yearStr := query.Get("year")
+
+	year := time.Now().Year()
+	if yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil {
+			year = y
+		}
+	}
+
+	summaries, err := h.db.GetMonthlySummary(year)
+	if err != nil {
+		respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Failed to fetch chart data",
+		})
+		return
+	}
+
+	// Create map for quick lookup
+	summaryMap := make(map[int]database.MonthlySummary)
+	for _, s := range summaries {
+		summaryMap[s.Month] = s
+	}
+
+	// Build response with all 12 months
+	monthNames := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+
+	var data []MonthlyChartData
+	for i := 1; i <= 12; i++ {
+		summary, exists := summaryMap[i]
+		chartData := MonthlyChartData{
+			Month: monthNames[i-1],
+		}
+		if exists {
+			chartData.Income = summary.Income
+			chartData.Expense = summary.Expense
+		}
+		data = append(data, chartData)
+	}
+
+	respondJSON(w, http.StatusOK, ChartDataResponse{
+		Year: year,
+		Data: data,
 	})
 }

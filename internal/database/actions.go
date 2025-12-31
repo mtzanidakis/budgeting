@@ -17,6 +17,13 @@ type ActionFilters struct {
 	Offset    int
 }
 
+type MonthlySummary struct {
+	Year    int     `json:"year"`
+	Month   int     `json:"month"`
+	Income  float64 `json:"income"`
+	Expense float64 `json:"expense"`
+}
+
 func (db *DB) CreateAction(userID int64, actionType models.ActionType, date, description string, amount float64) (*models.Action, error) {
 	now := time.Now()
 	result, err := db.Exec(
@@ -142,4 +149,35 @@ func (db *DB) CountActions(filters ActionFilters) (int, error) {
 	}
 
 	return count, nil
+}
+
+func (db *DB) GetMonthlySummary(year int) ([]MonthlySummary, error) {
+	query := `
+		SELECT
+			CAST(strftime('%Y', date) AS INTEGER) as year,
+			CAST(strftime('%m', date) AS INTEGER) as month,
+			SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+			SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+		FROM actions
+		WHERE CAST(strftime('%Y', date) AS INTEGER) = ?
+		GROUP BY year, month
+		ORDER BY month ASC
+	`
+
+	rows, err := db.Query(query, year)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monthly summary: %w", err)
+	}
+	defer rows.Close()
+
+	var summaries []MonthlySummary
+	for rows.Next() {
+		var summary MonthlySummary
+		if err := rows.Scan(&summary.Year, &summary.Month, &summary.Income, &summary.Expense); err != nil {
+			return nil, fmt.Errorf("failed to scan monthly summary: %w", err)
+		}
+		summaries = append(summaries, summary)
+	}
+
+	return summaries, nil
 }

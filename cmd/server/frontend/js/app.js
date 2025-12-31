@@ -30,6 +30,11 @@ const state = {
             totalPages: 0
         }
     },
+    chartsPage: {
+        year: new Date().getFullYear(),
+        chartData: null,
+        chartInstance: null
+    },
     datePicker: {
         visible: false,
         targetInput: null,
@@ -343,6 +348,10 @@ function Header() {
                        class="nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
                         All Actions
                     </a>
+                    <a href="#" onclick="navigateTo('charts'); return false;"
+                       class="nav-link ${state.currentPage === 'charts' ? 'active' : ''}">
+                        Charts
+                    </a>
                     <button onclick="toggleTheme()" class="icon-btn">
                         ${state.theme === 'light' ? '🌙' : '☀️'}
                     </button>
@@ -569,6 +578,155 @@ function Pagination() {
     `;
 }
 
+function ChartsPage() {
+    return `
+        <div>
+            ${Header()}
+            <main class="dashboard-main">
+                <div class="container">
+                    ${ChartsFilters()}
+                    ${ChartsDisplay()}
+                </div>
+            </main>
+        </div>
+    `;
+}
+
+function ChartsFilters() {
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({length: 10}, (_, i) => currentYear - i);
+
+    return `
+        <div class="card filters-card mb-6">
+            <h2 style="margin-bottom: 1rem;">Monthly Income & Expenses</h2>
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label>Year</label>
+                    <select onchange="updateChartYear(parseInt(this.value))" class="input">
+                        ${years.map(y => `
+                            <option value="${y}" ${state.chartsPage.year === y ? 'selected' : ''}>${y}</option>
+                        `).join('')}
+                    </select>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function ChartsDisplay() {
+    if (!state.chartsPage.chartData) {
+        return `
+            <div class="card empty-state">
+                <p class="empty-state-title">Loading chart data...</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="card" style="padding: 2rem;">
+            <canvas id="monthly-chart"></canvas>
+        </div>
+    `;
+}
+
+function renderChart() {
+    if (state.currentPage !== 'charts' || !state.chartsPage.chartData) {
+        return;
+    }
+
+    // Destroy existing chart to prevent duplicates
+    if (state.chartsPage.chartInstance) {
+        state.chartsPage.chartInstance.destroy();
+        state.chartsPage.chartInstance = null;
+    }
+
+    // Wait for DOM to be ready
+    setTimeout(() => {
+        const canvas = document.getElementById('monthly-chart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const chartData = state.chartsPage.chartData;
+
+        const labels = chartData.data.map(d => d.month);
+        const incomeData = chartData.data.map(d => d.income);
+        const expenseData = chartData.data.map(d => d.expense);
+
+        state.chartsPage.chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: incomeData,
+                        backgroundColor: '#10b981',
+                        borderColor: '#10b981',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Expenses',
+                        data: expenseData,
+                        backgroundColor: '#ef4444',
+                        borderColor: '#ef4444',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: getComputedStyle(document.documentElement)
+                                .getPropertyValue('--text-primary').trim()
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                label += state.currency + context.parsed.y.toFixed(2);
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: getComputedStyle(document.documentElement)
+                                .getPropertyValue('--border-color').trim()
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.documentElement)
+                                .getPropertyValue('--text-primary').trim()
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: getComputedStyle(document.documentElement)
+                                .getPropertyValue('--border-color').trim()
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.documentElement)
+                                .getPropertyValue('--text-primary').trim(),
+                            callback: function(value) {
+                                return state.currency + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }, 0);
+}
+
 function Filters() {
     return `
         <div class="card filters-card mb-6">
@@ -740,6 +898,8 @@ function navigateTo(page) {
         loadAllActions();
     } else if (page === 'dashboard') {
         loadActions();
+    } else if (page === 'charts') {
+        loadChartData();
     }
     render();
 }
@@ -816,6 +976,22 @@ async function loadAllActions() {
     }
 }
 
+async function loadChartData() {
+    const params = new URLSearchParams();
+    params.append('year', state.chartsPage.year);
+
+    const data = await api(`/api/charts/monthly?${params}`);
+    if (data) {
+        state.chartsPage.chartData = data;
+        render();
+    }
+}
+
+function updateChartYear(year) {
+    state.chartsPage.year = year;
+    loadChartData();
+}
+
 function calculatePageNumbers(current, total) {
     const pages = new Set();
     pages.add(1);
@@ -854,7 +1030,14 @@ function render() {
     if (!state.user) {
         app.innerHTML = LoginPage();
     } else {
-        app.innerHTML = state.currentPage === 'all-actions' ? AllActionsPage() : Dashboard();
+        if (state.currentPage === 'all-actions') {
+            app.innerHTML = AllActionsPage();
+        } else if (state.currentPage === 'charts') {
+            app.innerHTML = ChartsPage();
+            renderChart();
+        } else {
+            app.innerHTML = Dashboard();
+        }
     }
     applyTheme();
 }

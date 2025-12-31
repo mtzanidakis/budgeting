@@ -73,6 +73,7 @@ func main() {
 		r.Post("/api/logout", authHandler.Logout)
 		r.Get("/api/actions", actionsHandler.List)
 		r.Post("/api/actions", actionsHandler.Create)
+		r.Get("/api/charts/monthly", actionsHandler.GetChartData)
 		r.Get("/api/users", usersHandler.List)
 	})
 
