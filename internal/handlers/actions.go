@@ -38,6 +38,11 @@ type ActionResponse struct {
 	CreatedAt   string  `json:"created_at"`
 }
 
+type PaginatedActionsResponse struct {
+	Actions []ActionResponse `json:"actions"`
+	Total   int              `json:"total"`
+}
+
 func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -52,6 +57,15 @@ func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 	if limitStr := query.Get("limit"); limitStr != "" {
 		if limit, err := strconv.Atoi(limitStr); err == nil {
 			filters.Limit = limit
+		}
+	}
+
+	// Check if offset parameter is provided for pagination
+	isPaginated := false
+	if offsetStr := query.Get("offset"); offsetStr != "" {
+		if offset, err := strconv.Atoi(offsetStr); err == nil {
+			filters.Offset = offset
+			isPaginated = true
 		}
 	}
 
@@ -88,6 +102,24 @@ func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 		response = []ActionResponse{}
 	}
 
+	// If paginated, return paginated response with total count
+	if isPaginated {
+		total, err := h.db.CountActions(filters)
+		if err != nil {
+			respondJSON(w, http.StatusInternalServerError, map[string]string{
+				"error": "Failed to count actions",
+			})
+			return
+		}
+
+		respondJSON(w, http.StatusOK, PaginatedActionsResponse{
+			Actions: response,
+			Total:   total,
+		})
+		return
+	}
+
+	// Otherwise, return old format (backward compatible)
 	respondJSON(w, http.StatusOK, response)
 }
 

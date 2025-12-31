@@ -11,6 +11,25 @@ const state = {
     },
     theme: localStorage.getItem('theme') || 'light',
     currency: '€',
+    currentPage: 'dashboard',
+    allActionsPage: {
+        actions: [],
+        filters: {
+            mode: 'month',
+            month: new Date().getMonth(),
+            year: new Date().getFullYear(),
+            username: '',
+            type: '',
+            date_from: '',
+            date_to: ''
+        },
+        pagination: {
+            currentPage: 1,
+            perPage: 20,
+            totalActions: 0,
+            totalPages: 0
+        }
+    },
     datePicker: {
         visible: false,
         targetInput: null,
@@ -238,6 +257,7 @@ async function checkSession() {
         state.user = data.user;
         await loadActions();
         await loadUsers();
+        setMonthDateRange();
     }
     render();
 }
@@ -313,29 +333,38 @@ function LoginPage() {
     `;
 }
 
-function Dashboard() {
+function Header() {
     return `
-        <div>
-            <header>
-                <div class="header-content">
-                    <h1>Budgeting</h1>
-                    <div class="header-right">
-                        <button onclick="toggleTheme()" class="icon-btn">
-                            ${state.theme === 'light' ? '🌙' : '☀️'}
+        <header>
+            <div class="header-content">
+                <h1>Budgeting</h1>
+                <div class="header-right">
+                    <a href="#" onclick="navigateTo('all-actions'); return false;"
+                       class="nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
+                        All Actions
+                    </a>
+                    <button onclick="toggleTheme()" class="icon-btn">
+                        ${state.theme === 'light' ? '🌙' : '☀️'}
+                    </button>
+                    <div class="user-menu">
+                        <button onclick="toggleUserMenu()" class="user-menu-trigger">
+                            <span>${state.user?.name || 'User'}</span>
+                            <span>▼</span>
                         </button>
-                        <div class="user-menu">
-                            <button onclick="toggleUserMenu()" class="user-menu-trigger">
-                                <span>${state.user?.name || 'User'}</span>
-                                <span>▼</span>
-                            </button>
-                            <div id="user-menu" class="user-menu-dropdown hidden">
-                                <button onclick="logout()">Logout</button>
-                            </div>
+                        <div id="user-menu" class="user-menu-dropdown hidden">
+                            <button onclick="logout()">Logout</button>
                         </div>
                     </div>
                 </div>
-            </header>
+            </div>
+        </header>
+    `;
+}
 
+function Dashboard() {
+    return `
+        <div>
+            ${Header()}
             <main class="dashboard-main">
                 <div class="container">
                     ${Filters()}
@@ -345,6 +374,197 @@ function Dashboard() {
 
             <button class="floating-button" onclick="openAddActionModal()">+</button>
             <div id="modal-container"></div>
+        </div>
+    `;
+}
+
+function AllActionsPage() {
+    return `
+        <div>
+            ${Header()}
+            <main class="dashboard-main">
+                <div class="container">
+                    ${AllActionsFilters()}
+                    ${AllActionsTable()}
+                    ${Pagination()}
+                </div>
+            </main>
+        </div>
+    `;
+}
+
+function AllActionsFilters() {
+    const mode = state.allActionsPage.filters.mode;
+    return `
+        <div class="card filters-card mb-6">
+            <div class="filter-mode-toggle mb-4">
+                <button class="btn ${mode === 'month' ? 'btn-primary' : 'btn-secondary'}"
+                        onclick="setFilterMode('month')">Month View</button>
+                <button class="btn ${mode === 'custom' ? 'btn-primary' : 'btn-secondary'}"
+                        onclick="setFilterMode('custom')">Custom Range</button>
+            </div>
+            ${mode === 'month' ? MonthFilter() : CustomRangeFilters()}
+        </div>
+    `;
+}
+
+function MonthFilter() {
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({length: 10}, (_, i) => currentYear - i);
+
+    return `
+        <div class="filter-grid">
+            <div class="form-group">
+                <label>Month</label>
+                <select onchange="updateAllActionsFilter('month', parseInt(this.value))" class="input">
+                    ${months.map((m, i) => `
+                        <option value="${i}" ${state.allActionsPage.filters.month === i ? 'selected' : ''}>${m}</option>
+                    `).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Year</label>
+                <select onchange="updateAllActionsFilter('year', parseInt(this.value))" class="input">
+                    ${years.map(y => `
+                        <option value="${y}" ${state.allActionsPage.filters.year === y ? 'selected' : ''}>${y}</option>
+                    `).join('')}
+                </select>
+            </div>
+            ${UserAndTypeFilters('all-actions')}
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button onclick="clearAllActionsFilters()" class="btn btn-secondary" style="width: 100%;">
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function CustomRangeFilters() {
+    return `
+        <div class="filter-grid">
+            ${UserAndTypeFilters('all-actions')}
+            <div class="form-group">
+                <label>From Date</label>
+                <input type="text" id="all-actions-date-from"
+                       value="${state.allActionsPage.filters.date_from}"
+                       onclick="showDatePicker('all-actions-date-from')"
+                       class="input" placeholder="DD/MM/YYYY" readonly>
+            </div>
+            <div class="form-group">
+                <label>To Date</label>
+                <input type="text" id="all-actions-date-to"
+                       value="${state.allActionsPage.filters.date_to}"
+                       onclick="showDatePicker('all-actions-date-to')"
+                       class="input" placeholder="DD/MM/YYYY" readonly>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button onclick="clearAllActionsFilters()" class="btn btn-secondary" style="width: 100%;">
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function UserAndTypeFilters(context) {
+    const filters = context === 'all-actions' ? state.allActionsPage.filters : state.filters;
+    const updateFn = context === 'all-actions' ? 'updateAllActionsFilter' : 'updateFilter';
+
+    return `
+        <div class="form-group">
+            <label>User</label>
+            <select onchange="${updateFn}('username', this.value)" class="input">
+                <option value="">All Users</option>
+                ${state.users.map(u => `
+                    <option value="${u.username}" ${filters.username === u.username ? 'selected' : ''}>${u.name}</option>
+                `).join('')}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Type</label>
+            <select onchange="${updateFn}('type', this.value)" class="input">
+                <option value="">All</option>
+                <option value="income" ${filters.type === 'income' ? 'selected' : ''}>Income</option>
+                <option value="expense" ${filters.type === 'expense' ? 'selected' : ''}>Expense</option>
+            </select>
+        </div>
+    `;
+}
+
+function AllActionsTable() {
+    const actions = state.allActionsPage.actions;
+
+    if (actions.length === 0) {
+        return `
+            <div class="card empty-state">
+                <p class="empty-state-title">No actions found</p>
+                <p class="empty-state-text">Try adjusting your filters</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="card mb-6">
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${actions.map(action => `
+                            <tr>
+                                <td>${formatDateForDisplay(action.date)}</td>
+                                <td>${action.name}</td>
+                                <td><span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">${action.type}</span></td>
+                                <td>${action.description}</td>
+                                <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
+                                    ${action.type === 'income' ? '+' : '-'}${state.currency}${action.amount.toFixed(2)}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function Pagination() {
+    const { currentPage, totalPages, totalActions, perPage } = state.allActionsPage.pagination;
+
+    if (totalPages <= 1) return '';
+
+    const pageNumbers = calculatePageNumbers(currentPage, totalPages);
+
+    return `
+        <div class="card pagination-card">
+            <div class="pagination-container">
+                <button class="btn btn-secondary" onclick="goToPage(${currentPage - 1})"
+                        ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
+
+                <div class="pagination-numbers">
+                    ${pageNumbers.map(page => {
+                        if (page === '...') return '<span class="pagination-ellipsis">...</span>';
+                        return `<button class="btn ${page === currentPage ? 'btn-primary' : 'btn-secondary'}"
+                                        onclick="goToPage(${page})">${page}</button>`;
+                    }).join('')}
+                </div>
+
+                <button class="btn btn-secondary" onclick="goToPage(${currentPage + 1})"
+                        ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
+            </div>
+            <div class="pagination-info">
+                Showing ${(currentPage - 1) * perPage + 1}-${Math.min(currentPage * perPage, totalActions)} of ${totalActions} actions
+            </div>
         </div>
     `;
 }
@@ -513,6 +733,106 @@ function clearFilters() {
     render();
 }
 
+// All Actions Page Navigation and Filters
+function navigateTo(page) {
+    state.currentPage = page;
+    if (page === 'all-actions') {
+        loadAllActions();
+    } else if (page === 'dashboard') {
+        loadActions();
+    }
+    render();
+}
+
+function setFilterMode(mode) {
+    state.allActionsPage.filters.mode = mode;
+    if (mode === 'month') {
+        setMonthDateRange();
+    }
+    state.allActionsPage.pagination.currentPage = 1;
+    loadAllActions();
+}
+
+function setMonthDateRange() {
+    const { month, year } = state.allActionsPage.filters;
+    const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    state.allActionsPage.filters.date_from = formatDateForDisplay(firstDay);
+    state.allActionsPage.filters.date_to = formatDateForDisplay(lastDayStr);
+}
+
+function updateAllActionsFilter(key, value) {
+    state.allActionsPage.filters[key] = value;
+    if (state.allActionsPage.filters.mode === 'month' && (key === 'month' || key === 'year')) {
+        setMonthDateRange();
+    }
+    state.allActionsPage.pagination.currentPage = 1;
+    loadAllActions();
+}
+
+function clearAllActionsFilters() {
+    const now = new Date();
+    state.allActionsPage.filters = {
+        mode: 'month',
+        month: now.getMonth(),
+        year: now.getFullYear(),
+        username: '',
+        type: '',
+        date_from: '',
+        date_to: ''
+    };
+    state.allActionsPage.pagination.currentPage = 1;
+    setMonthDateRange();
+    loadAllActions();
+    render();
+}
+
+function goToPage(page) {
+    if (page < 1 || page > state.allActionsPage.pagination.totalPages) return;
+    state.allActionsPage.pagination.currentPage = page;
+    loadAllActions();
+}
+
+async function loadAllActions() {
+    const { filters, pagination } = state.allActionsPage;
+    const params = new URLSearchParams();
+
+    const offset = (pagination.currentPage - 1) * pagination.perPage;
+    params.append('offset', offset);
+    params.append('limit', pagination.perPage);
+
+    if (filters.date_from) params.append('date_from', formatDateToISO(filters.date_from));
+    if (filters.date_to) params.append('date_to', formatDateToISO(filters.date_to));
+    if (filters.username) params.append('username', filters.username);
+    if (filters.type) params.append('type', filters.type);
+
+    const data = await api(`/api/actions?${params}`);
+    if (data) {
+        state.allActionsPage.actions = data.actions || [];
+        state.allActionsPage.pagination.totalActions = data.total || 0;
+        state.allActionsPage.pagination.totalPages = Math.ceil(data.total / pagination.perPage);
+        render();
+    }
+}
+
+function calculatePageNumbers(current, total) {
+    const pages = new Set();
+    pages.add(1);
+    pages.add(total);
+    for (let i = Math.max(1, current - 1); i <= Math.min(total, current + 1); i++) {
+        pages.add(i);
+    }
+
+    const sorted = Array.from(pages).sort((a, b) => a - b);
+    const result = [];
+    for (let i = 0; i < sorted.length; i++) {
+        if (i > 0 && sorted[i] - sorted[i-1] > 1) result.push('...');
+        result.push(sorted[i]);
+    }
+    return result;
+}
+
 function toggleUserMenu() {
     const menu = document.getElementById('user-menu');
     menu.classList.toggle('hidden');
@@ -531,7 +851,11 @@ function closeModal(event) {
 // Render
 function render() {
     const app = document.getElementById('app');
-    app.innerHTML = state.user ? Dashboard() : LoginPage();
+    if (!state.user) {
+        app.innerHTML = LoginPage();
+    } else {
+        app.innerHTML = state.currentPage === 'all-actions' ? AllActionsPage() : Dashboard();
+    }
     applyTheme();
 }
 
