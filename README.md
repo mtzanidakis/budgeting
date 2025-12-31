@@ -4,14 +4,31 @@ A secure, fast, and simple Progressive Web App (PWA) for managing income and exp
 
 ## Features
 
+### Core Functionality
 - **Secure Authentication**: Username/password authentication with bcrypt password hashing
 - **Session Management**: HTTP-only cookies with secure session storage
 - **Multi-user Support**: Track actions across multiple family members
+- **Action Management**: Create, edit, and delete income/expense entries with ownership controls
+- **User Profiles**: Update name and change password through profile page
 - **Filtering**: Filter actions by user, type (income/expense), and date range
-- **Progressive Web App**: Installable on Android with offline support
+- **Pagination**: Browse through all actions with 20 items per page
+
+### Visualization & Insights
+- **Monthly Charts**: Visual breakdown of income vs expenses by month using Chart.js
+- **Dashboard Overview**: Quick view of 10 most recent actions
+- **Charts Page**: Annual view of monthly income and expense trends
+
+### User Experience
+- **Multi-language Support**: Full internationalization with English and Greek translations
 - **Dark/Light Theme**: Theme toggle with persistent preference
+- **Responsive Design**: Mobile-first design with burger menu for small screens (≤768px)
+- **Progressive Web App**: Installable on Android with offline support
+- **Inline Actions**: Click on your own actions to edit or delete them directly
+
+### Administration
 - **Admin CLI**: Manage users via command-line interface
 - **Structured Logging**: JSON-formatted logs with request tracking
+- **Docker Support**: Production and development Docker Compose configurations
 
 ## Tech Stack
 
@@ -24,9 +41,10 @@ A secure, fast, and simple Progressive Web App (PWA) for managing income and exp
 
 ### Frontend
 - Vanilla JavaScript (no build step required)
-- Tailwind CSS (via CDN)
+- Custom CSS with CSS Variables for theming
+- Chart.js for data visualization
 - Service Worker for PWA functionality
-- Responsive mobile-first design
+- Responsive mobile-first design with burger menu
 
 ## Quick Start
 
@@ -78,26 +96,30 @@ Open your browser to `http://localhost:8080`
 
 ### Docker Deployment
 
-1. **Configure environment**
+Two Docker Compose configurations are provided:
+
+#### Production (`docker-compose.yml`)
 ```bash
 # Create a .env file
 echo "SESSION_SECRET=$(openssl rand -base64 32)" > .env
+
+# Build and run
+docker compose up -d
+
+# Create users via CLI
+docker compose exec budgeting-app /app/cli user:add -username admin -name Admin
+
+# View logs
+docker compose logs -f
 ```
 
-2. **Build and run**
+#### Development (`docker-compose.dev.yml`)
 ```bash
-docker-compose up -d
+# Run development setup with exposed port 8080
+docker compose -f docker-compose.dev.yml up -d
 ```
 
-3. **Create users via CLI**
-```bash
-docker-compose exec app /app/cli user:add -username admin -name Admin
-```
-
-4. **View logs**
-```bash
-docker-compose logs -f
-```
+The production configuration keeps the port unexposed for security, while the development configuration exposes port 8080 for local access.
 
 ## CLI Commands
 
@@ -151,15 +173,28 @@ docker-compose logs -f
 ### Authentication
 - `POST /api/login` - Login with username/password
 - `POST /api/logout` - Logout and clear session
+- `GET /api/me` - Get current user session info
 
 ### Actions
 - `GET /api/actions` - List actions (with filters)
-  - Query params: `username`, `type`, `date_from`, `date_to`, `limit`
+  - Query params: `username`, `type`, `date_from`, `date_to`, `limit`, `offset`
+  - Returns paginated response when `offset` is provided
 - `POST /api/actions` - Create new action
   - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00}`
+- `PUT /api/actions/{id}` - Update action (requires ownership)
+  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00}`
+- `DELETE /api/actions/{id}` - Delete action (requires ownership)
+
+### Charts
+- `GET /api/charts/monthly` - Get monthly income/expense summary
+  - Query params: `year` (optional, defaults to current year)
 
 ### Users
 - `GET /api/users` - List all users (for filter dropdown)
+- `PUT /api/profile` - Update user profile (name and/or password)
+
+### Configuration
+- `GET /api/config` - Get app configuration (e.g., currency symbol)
 
 ## Environment Variables
 
@@ -244,11 +279,13 @@ go test -v ./...
 
 ## Security Notes
 
-- Passwords are hashed using bcrypt before storage
-- Sessions use HTTP-only cookies (not accessible via JavaScript)
-- All API endpoints except `/api/login` require authentication
-- Foreign key constraints prevent orphaned data
-- Input validation on all user-submitted data
+- **Password Security**: Passwords are hashed using bcrypt before storage
+- **Session Security**: Sessions use HTTP-only cookies (not accessible via JavaScript)
+- **Authentication**: All API endpoints except `/api/login` and `/api/config` require authentication
+- **Ownership Controls**: Users can only edit/delete their own actions (enforced at database level)
+- **Data Integrity**: Foreign key constraints prevent orphaned data
+- **Input Validation**: All user-submitted data is validated on both frontend and backend
+- **CSRF Protection**: SameSite=Strict cookies prevent cross-site request forgery
 
 ## PWA Installation
 
@@ -288,12 +325,15 @@ make actions-query -username john
 ## Future Enhancements
 
 See `docs/PRD.md` section 9 for planned features:
-- Monthly summaries & charts
+- ~~Monthly summaries & charts~~ ✅ Implemented
+- ~~User profile management~~ ✅ Implemented
+- ~~Multi-language support~~ ✅ Implemented
 - CSV/PDF exports
 - Role-based permissions
 - Expense categories
 - Recurring transactions
 - Budget limits & alerts
+- Email notifications
 
 ## License
 
