@@ -337,7 +337,7 @@ function Header() {
     return `
         <header>
             <div class="header-content">
-                <h1>Budgeting</h1>
+                <h1><a href="#" onclick="navigateTo('dashboard'); return false;" style="text-decoration: none; color: inherit;">Budgeting</a></h1>
                 <div class="header-right">
                     <a href="#" onclick="navigateTo('all-actions'); return false;"
                        class="nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
