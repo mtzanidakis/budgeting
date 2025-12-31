@@ -49,7 +49,8 @@ const state = {
     editActionModal: {
         visible: false,
         action: null
-    }
+    },
+    mobileMenuOpen: false
 };
 
 // Date formatting helpers
@@ -397,7 +398,9 @@ function Header() {
         <header>
             <div class="header-content">
                 <h1><a href="#" onclick="navigateTo('dashboard'); return false;" style="text-decoration: none; color: inherit;">${t('nav.budgeting')}</a></h1>
-                <div class="header-right">
+
+                <!-- Desktop Navigation -->
+                <div class="header-right desktop-nav">
                     <a href="#" onclick="navigateTo('all-actions'); return false;"
                        class="nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
                         ${t('nav.all_actions')}
@@ -424,6 +427,50 @@ function Header() {
                             <button onclick="logout()">${t('nav.logout')}</button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Mobile Burger Menu -->
+                <button class="burger-menu-btn" onclick="toggleMobileMenu()">
+                    <span class="burger-line"></span>
+                    <span class="burger-line"></span>
+                    <span class="burger-line"></span>
+                </button>
+            </div>
+
+            <!-- Mobile Menu Overlay -->
+            <div class="mobile-menu ${state.mobileMenuOpen ? 'open' : ''}" onclick="closeMobileMenuOnOverlay(event)">
+                <div class="mobile-menu-content" onclick="event.stopPropagation()">
+                    <div class="mobile-menu-header">
+                        <h2>${state.user?.name || 'User'}</h2>
+                        <button class="mobile-menu-close" onclick="toggleMobileMenu()">&times;</button>
+                    </div>
+                    <nav class="mobile-menu-nav">
+                        <a href="#" onclick="navigateTo('all-actions'); toggleMobileMenu(); return false;"
+                           class="mobile-nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
+                            ${t('nav.all_actions')}
+                        </a>
+                        <a href="#" onclick="navigateTo('charts'); toggleMobileMenu(); return false;"
+                           class="mobile-nav-link ${state.currentPage === 'charts' ? 'active' : ''}">
+                            ${t('nav.charts')}
+                        </a>
+                        <a href="#" onclick="navigateTo('profile'); toggleMobileMenu(); return false;"
+                           class="mobile-nav-link ${state.currentPage === 'profile' ? 'active' : ''}">
+                            ${t('nav.profile')}
+                        </a>
+                        <div class="mobile-menu-divider"></div>
+                        <button onclick="toggleTheme()" class="mobile-menu-btn">
+                            <span>${state.theme === 'light' ? '🌙' : '☀️'}</span>
+                            <span>${state.theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+                        </button>
+                        <button onclick="toggleLanguage()" class="mobile-menu-btn">
+                            <span>🌐</span>
+                            <span>${getLangMeta(state.language).name}</span>
+                        </button>
+                        <div class="mobile-menu-divider"></div>
+                        <button onclick="logout()" class="mobile-menu-btn logout-btn">
+                            ${t('nav.logout')}
+                        </button>
+                    </nav>
                 </div>
             </div>
         </header>
@@ -1407,6 +1454,17 @@ function calculatePageNumbers(current, total) {
 function toggleUserMenu() {
     const menu = document.getElementById('user-menu');
     menu.classList.toggle('hidden');
+}
+
+function toggleMobileMenu() {
+    state.mobileMenuOpen = !state.mobileMenuOpen;
+    render();
+}
+
+function closeMobileMenuOnOverlay(event) {
+    if (event.target.classList.contains('mobile-menu')) {
+        toggleMobileMenu();
+    }
 }
 
 function openAddActionModal() {
