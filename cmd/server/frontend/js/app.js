@@ -293,6 +293,7 @@ async function loadActions() {
     if (state.filters.type) params.append('type', state.filters.type);
     if (state.filters.date_from) params.append('date_from', formatDateToISO(state.filters.date_from));
     if (state.filters.date_to) params.append('date_to', formatDateToISO(state.filters.date_to));
+    params.append('limit', '10');
 
     const data = await api(`/api/actions?${params}`);
     if (data) {
@@ -1030,6 +1031,11 @@ function ActionsList() {
                         `).join('')}
                     </tbody>
                 </table>
+            </div>
+            <div class="card-footer">
+                <button onclick="navigateTo('all-actions')" class="btn btn-secondary w-full">
+                    ${t('dashboard.view_all_actions')}
+                </button>
             </div>
         </div>
     `;

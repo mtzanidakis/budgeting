@@ -41,6 +41,9 @@ const translations = {
         'table.description': 'Description',
         'table.amount': 'Amount',
 
+        // Dashboard
+        'dashboard.view_all_actions': 'View All Actions',
+
         // Empty States
         'empty.no_actions': 'No actions yet',
         'empty.click_add': 'Click the + button to add your first action',
@@ -145,6 +148,9 @@ const translations = {
         'table.type': 'Τύπος',
         'table.description': 'Περιγραφή',
         'table.amount': 'Ποσό',
+
+        // Dashboard
+        'dashboard.view_all_actions': 'Προβολή Όλων των Κινήσεων',
 
         // Empty States
         'empty.no_actions': 'Δεν υπάρχουν κινήσεις ακόμα',
