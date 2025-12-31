@@ -1,6 +1,7 @@
 // State management
 const state = {
     user: null,
+    language: localStorage.getItem('language') || 'en',
     actions: [],
     users: [],
     filters: {
@@ -146,8 +147,8 @@ function renderDatePicker() {
 function DatePicker() {
     if (!state.datePicker.visible) return '';
 
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthNames = ta('months.full');
+    const weekdays = ta('weekdays');
 
     const firstDay = new Date(state.datePicker.currentYear, state.datePicker.currentMonth, 1).getDay();
     const daysInMonth = new Date(state.datePicker.currentYear, state.datePicker.currentMonth + 1, 0).getDate();
@@ -179,7 +180,7 @@ function DatePicker() {
                     <button onclick="changeMonth(1); event.stopPropagation();" class="date-picker-nav">&gt;</button>
                 </div>
                 <div class="calendar-weekdays">
-                    <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                    ${weekdays.map(day => `<div>${day}</div>`).join('')}
                 </div>
                 <div class="calendar-days">
                     ${calendarDays}
@@ -231,6 +232,15 @@ function toggleTheme() {
     render();
 }
 
+function toggleLanguage() {
+    const languages = getAvailableLanguages();
+    const currentIndex = languages.indexOf(state.language);
+    const nextIndex = (currentIndex + 1) % languages.length;
+    state.language = languages[nextIndex];
+    localStorage.setItem('language', state.language);
+    render();
+}
+
 // Auth
 async function login(username, password) {
     const data = await api('/api/login', {
@@ -246,7 +256,7 @@ async function login(username, password) {
         await loadUsers();
         render();
     } else {
-        const errorMsg = data?.message || 'Login failed. Please check your credentials.';
+        const errorMsg = data?.message || t('login.error');
         console.error('Login failed:', errorMsg, data);
         alert(errorMsg);
     }
@@ -319,22 +329,27 @@ function LoginPage() {
         <div class="login-container">
             <div class="card login-card">
                 <div class="login-header">
-                    <h1>Budgeting App</h1>
+                    <h1>${t('login.title')}</h1>
                     <button onclick="toggleTheme()" class="icon-btn">
                         ${state.theme === 'light' ? '🌙' : '☀️'}
+                    </button>
+                    <button onclick="toggleLanguage()"
+                            class="icon-btn"
+                            title="${getLangMeta(state.language).name}">
+                        ${getLangMeta(state.language).code}
                     </button>
                 </div>
                 <form onsubmit="handleLogin(event)">
                     <div class="form-group">
-                        <label>Username</label>
+                        <label>${t('login.username')}</label>
                         <input type="text" id="username" class="input" required>
                     </div>
                     <div class="form-group">
-                        <label>Password</label>
+                        <label>${t('login.password')}</label>
                         <input type="password" id="password" class="input" required>
                     </div>
                     <div class="form-group mt-4">
-                        <button type="submit" class="btn btn-primary w-full">Login</button>
+                        <button type="submit" class="btn btn-primary w-full">${t('login.button')}</button>
                     </div>
                 </form>
             </div>
@@ -346,18 +361,23 @@ function Header() {
     return `
         <header>
             <div class="header-content">
-                <h1><a href="#" onclick="navigateTo('dashboard'); return false;" style="text-decoration: none; color: inherit;">Budgeting</a></h1>
+                <h1><a href="#" onclick="navigateTo('dashboard'); return false;" style="text-decoration: none; color: inherit;">${t('nav.budgeting')}</a></h1>
                 <div class="header-right">
                     <a href="#" onclick="navigateTo('all-actions'); return false;"
                        class="nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
-                        All Actions
+                        ${t('nav.all_actions')}
                     </a>
                     <a href="#" onclick="navigateTo('charts'); return false;"
                        class="nav-link ${state.currentPage === 'charts' ? 'active' : ''}">
-                        Charts
+                        ${t('nav.charts')}
                     </a>
                     <button onclick="toggleTheme()" class="icon-btn">
                         ${state.theme === 'light' ? '🌙' : '☀️'}
+                    </button>
+                    <button onclick="toggleLanguage()"
+                            class="icon-btn"
+                            title="${getLangMeta(state.language).name}">
+                        ${getLangMeta(state.language).code}
                     </button>
                     <div class="user-menu">
                         <button onclick="toggleUserMenu()" class="user-menu-trigger">
@@ -365,8 +385,8 @@ function Header() {
                             <span>▼</span>
                         </button>
                         <div id="user-menu" class="user-menu-dropdown hidden">
-                            <button onclick="navigateTo('profile'); toggleUserMenu();">Profile</button>
-                            <button onclick="logout()">Logout</button>
+                            <button onclick="navigateTo('profile'); toggleUserMenu();">${t('nav.profile')}</button>
+                            <button onclick="logout()">${t('nav.logout')}</button>
                         </div>
                     </div>
                 </div>
@@ -413,9 +433,9 @@ function AllActionsFilters() {
         <div class="card filters-card mb-6">
             <div class="filter-mode-toggle mb-4">
                 <button class="btn ${mode === 'month' ? 'btn-primary' : 'btn-secondary'}"
-                        onclick="setFilterMode('month')">Month View</button>
+                        onclick="setFilterMode('month')">${t('filters.month_view')}</button>
                 <button class="btn ${mode === 'custom' ? 'btn-primary' : 'btn-secondary'}"
-                        onclick="setFilterMode('custom')">Custom Range</button>
+                        onclick="setFilterMode('custom')">${t('filters.custom_range')}</button>
             </div>
             ${mode === 'month' ? MonthFilter() : CustomRangeFilters()}
         </div>
@@ -423,15 +443,14 @@ function AllActionsFilters() {
 }
 
 function MonthFilter() {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = ta('months.full');
     const currentYear = new Date().getFullYear();
     const years = Array.from({length: 10}, (_, i) => currentYear - i);
 
     return `
         <div class="filter-grid">
             <div class="form-group">
-                <label>Month</label>
+                <label>${t('filters.month')}</label>
                 <select onchange="updateAllActionsFilter('month', parseInt(this.value))" class="input">
                     ${months.map((m, i) => `
                         <option value="${i}" ${state.allActionsPage.filters.month === i ? 'selected' : ''}>${m}</option>
@@ -439,7 +458,7 @@ function MonthFilter() {
                 </select>
             </div>
             <div class="form-group">
-                <label>Year</label>
+                <label>${t('filters.year')}</label>
                 <select onchange="updateAllActionsFilter('year', parseInt(this.value))" class="input">
                     ${years.map(y => `
                         <option value="${y}" ${state.allActionsPage.filters.year === y ? 'selected' : ''}>${y}</option>
@@ -449,7 +468,7 @@ function MonthFilter() {
             ${UserAndTypeFilters('all-actions')}
             <div class="form-group" style="display: flex; align-items: flex-end;">
                 <button onclick="clearAllActionsFilters()" class="btn btn-secondary" style="width: 100%;">
-                    Clear Filters
+                    ${t('filters.clear')}
                 </button>
             </div>
         </div>
@@ -461,22 +480,22 @@ function CustomRangeFilters() {
         <div class="filter-grid">
             ${UserAndTypeFilters('all-actions')}
             <div class="form-group">
-                <label>From Date</label>
+                <label>${t('filters.from_date')}</label>
                 <input type="text" id="all-actions-date-from"
                        value="${state.allActionsPage.filters.date_from}"
                        onclick="showDatePicker('all-actions-date-from')"
-                       class="input" placeholder="DD/MM/YYYY" readonly>
+                       class="input" placeholder="${t('date_format')}" readonly>
             </div>
             <div class="form-group">
-                <label>To Date</label>
+                <label>${t('filters.to_date')}</label>
                 <input type="text" id="all-actions-date-to"
                        value="${state.allActionsPage.filters.date_to}"
                        onclick="showDatePicker('all-actions-date-to')"
-                       class="input" placeholder="DD/MM/YYYY" readonly>
+                       class="input" placeholder="${t('date_format')}" readonly>
             </div>
             <div class="form-group" style="display: flex; align-items: flex-end;">
                 <button onclick="clearAllActionsFilters()" class="btn btn-secondary" style="width: 100%;">
-                    Clear Filters
+                    ${t('filters.clear')}
                 </button>
             </div>
         </div>
@@ -489,20 +508,20 @@ function UserAndTypeFilters(context) {
 
     return `
         <div class="form-group">
-            <label>User</label>
+            <label>${t('filters.user')}</label>
             <select onchange="${updateFn}('username', this.value)" class="input">
-                <option value="">All Users</option>
+                <option value="">${t('filters.all_users')}</option>
                 ${state.users.map(u => `
                     <option value="${u.username}" ${filters.username === u.username ? 'selected' : ''}>${u.name}</option>
                 `).join('')}
             </select>
         </div>
         <div class="form-group">
-            <label>Type</label>
+            <label>${t('filters.type')}</label>
             <select onchange="${updateFn}('type', this.value)" class="input">
-                <option value="">All</option>
-                <option value="income" ${filters.type === 'income' ? 'selected' : ''}>Income</option>
-                <option value="expense" ${filters.type === 'expense' ? 'selected' : ''}>Expense</option>
+                <option value="">${t('filters.all')}</option>
+                <option value="income" ${filters.type === 'income' ? 'selected' : ''}>${t('filters.income')}</option>
+                <option value="expense" ${filters.type === 'expense' ? 'selected' : ''}>${t('filters.expense')}</option>
             </select>
         </div>
     `;
@@ -514,8 +533,8 @@ function AllActionsTable() {
     if (actions.length === 0) {
         return `
             <div class="card empty-state">
-                <p class="empty-state-title">No actions found</p>
-                <p class="empty-state-text">Try adjusting your filters</p>
+                <p class="empty-state-title">${t('empty.no_actions_found')}</p>
+                <p class="empty-state-text">${t('empty.adjust_filters')}</p>
             </div>
         `;
     }
@@ -526,11 +545,11 @@ function AllActionsTable() {
                 <table>
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>User</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th class="text-right">Amount</th>
+                            <th>${t('table.date')}</th>
+                            <th>${t('table.user')}</th>
+                            <th>${t('table.type')}</th>
+                            <th>${t('table.description')}</th>
+                            <th class="text-right">${t('table.amount')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -538,7 +557,7 @@ function AllActionsTable() {
                             <tr>
                                 <td>${formatDateForDisplay(action.date)}</td>
                                 <td>${action.name}</td>
-                                <td><span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">${action.type}</span></td>
+                                <td><span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">${action.type === 'income' ? t('filters.income') : t('filters.expense')}</span></td>
                                 <td>${action.description}</td>
                                 <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
                                     ${action.type === 'income' ? '+' : '-'}${state.currency}${action.amount.toFixed(2)}
@@ -563,7 +582,7 @@ function Pagination() {
         <div class="card pagination-card">
             <div class="pagination-container">
                 <button class="btn btn-secondary" onclick="goToPage(${currentPage - 1})"
-                        ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
+                        ${currentPage === 1 ? 'disabled' : ''}>${t('pagination.previous')}</button>
 
                 <div class="pagination-numbers">
                     ${pageNumbers.map(page => {
@@ -574,10 +593,14 @@ function Pagination() {
                 </div>
 
                 <button class="btn btn-secondary" onclick="goToPage(${currentPage + 1})"
-                        ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
+                        ${currentPage === totalPages ? 'disabled' : ''}>${t('pagination.next')}</button>
             </div>
             <div class="pagination-info">
-                Showing ${(currentPage - 1) * perPage + 1}-${Math.min(currentPage * perPage, totalActions)} of ${totalActions} actions
+                ${t('pagination.showing', {
+                    from: (currentPage - 1) * perPage + 1,
+                    to: Math.min(currentPage * perPage, totalActions),
+                    total: totalActions
+                })}
             </div>
         </div>
     `;
@@ -603,10 +626,10 @@ function ChartsFilters() {
 
     return `
         <div class="card filters-card mb-6">
-            <h2 style="margin-bottom: 1rem;">Monthly Income & Expenses</h2>
+            <h2 style="margin-bottom: 1rem;">${t('charts.title')}</h2>
             <div class="filter-grid">
                 <div class="form-group">
-                    <label>Year</label>
+                    <label>${t('filters.year')}</label>
                     <select onchange="updateChartYear(parseInt(this.value))" class="input">
                         ${years.map(y => `
                             <option value="${y}" ${state.chartsPage.year === y ? 'selected' : ''}>${y}</option>
@@ -622,7 +645,7 @@ function ChartsDisplay() {
     if (!state.chartsPage.chartData) {
         return `
             <div class="card empty-state">
-                <p class="empty-state-title">Loading chart data...</p>
+                <p class="empty-state-title">${t('empty.loading_chart')}</p>
             </div>
         `;
     }
@@ -642,23 +665,23 @@ function ProfilePage() {
                 <div class="container">
                     <div class="profile-container">
                         <div class="card profile-card">
-                            <h2 class="profile-title">User Profile</h2>
+                            <h2 class="profile-title">${t('profile.title')}</h2>
 
                             ${state.profilePage.message ? InlineMessage(state.profilePage.message) : ''}
 
                             <form onsubmit="handleUpdateProfile(event)">
                                 <div class="form-group">
-                                    <label>Username</label>
+                                    <label>${t('profile.username')}</label>
                                     <input type="text"
                                            value="${state.user?.username || ''}"
                                            class="input"
                                            disabled
                                            style="opacity: 0.6; cursor: not-allowed;">
-                                    <small style="color: var(--text-secondary); font-size: 0.875rem;">Username cannot be changed</small>
+                                    <small style="color: var(--text-secondary); font-size: 0.875rem;">${t('profile.username_note')}</small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Name <span style="color: var(--danger);">*</span></label>
+                                    <label>${t('profile.name')} <span style="color: var(--danger);">*</span></label>
                                     <input type="text"
                                            id="profile-name"
                                            value="${state.user?.name || ''}"
@@ -668,37 +691,37 @@ function ProfilePage() {
                                 </div>
 
                                 <div class="profile-section-divider">
-                                    <h3>Change Password</h3>
+                                    <h3>${t('profile.change_password')}</h3>
                                     <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem;">
-                                        Leave blank to keep current password
+                                        ${t('profile.password_note')}
                                     </p>
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Current Password</label>
+                                    <label>${t('profile.current_password')}</label>
                                     <input type="password"
                                            id="profile-current-password"
                                            class="input"
                                            autocomplete="current-password">
                                     <small style="color: var(--text-secondary); font-size: 0.875rem;">
-                                        Required when changing password
+                                        ${t('profile.password_required_note')}
                                     </small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label>New Password</label>
+                                    <label>${t('profile.new_password')}</label>
                                     <input type="password"
                                            id="profile-new-password"
                                            class="input"
                                            minlength="6"
                                            autocomplete="new-password">
                                     <small style="color: var(--text-secondary); font-size: 0.875rem;">
-                                        Minimum 6 characters
+                                        ${t('profile.password_min_note')}
                                     </small>
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Confirm New Password</label>
+                                    <label>${t('profile.confirm_password')}</label>
                                     <input type="password"
                                            id="profile-confirm-password"
                                            class="input"
@@ -709,13 +732,13 @@ function ProfilePage() {
                                     <button type="submit"
                                             class="btn btn-primary"
                                             ${state.profilePage.isSubmitting ? 'disabled' : ''}>
-                                        ${state.profilePage.isSubmitting ? 'Saving...' : 'Save Changes'}
+                                        ${state.profilePage.isSubmitting ? t('profile.saving') : t('profile.save')}
                                     </button>
                                     <button type="button"
                                             onclick="navigateTo('dashboard')"
                                             class="btn btn-secondary"
                                             ${state.profilePage.isSubmitting ? 'disabled' : ''}>
-                                        Cancel
+                                        ${t('modal.cancel')}
                                     </button>
                                 </div>
                             </form>
@@ -776,14 +799,14 @@ function renderChart() {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Income',
+                        label: t('charts.income'),
                         data: incomeData,
                         backgroundColor: '#10b981',
                         borderColor: '#10b981',
                         borderWidth: 1
                     },
                     {
-                        label: 'Expenses',
+                        label: t('charts.expenses'),
                         data: expenseData,
                         backgroundColor: '#ef4444',
                         borderColor: '#ef4444',
@@ -850,9 +873,9 @@ function Filters() {
         <div class="card filters-card mb-6">
             <div class="filter-grid">
                 <div class="form-group">
-                    <label>User</label>
+                    <label>${t('filters.user')}</label>
                     <select onchange="updateFilter('username', this.value)" class="input">
-                        <option value="">All Users</option>
+                        <option value="">${t('filters.all_users')}</option>
                         ${state.users.map(u => `
                             <option value="${u.username}" ${state.filters.username === u.username ? 'selected' : ''}>
                                 ${u.name}
@@ -861,23 +884,23 @@ function Filters() {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Type</label>
+                    <label>${t('filters.type')}</label>
                     <select onchange="updateFilter('type', this.value)" class="input">
-                        <option value="">All</option>
-                        <option value="income" ${state.filters.type === 'income' ? 'selected' : ''}>Income</option>
-                        <option value="expense" ${state.filters.type === 'expense' ? 'selected' : ''}>Expense</option>
+                        <option value="">${t('filters.all')}</option>
+                        <option value="income" ${state.filters.type === 'income' ? 'selected' : ''}>${t('filters.income')}</option>
+                        <option value="expense" ${state.filters.type === 'expense' ? 'selected' : ''}>${t('filters.expense')}</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>From Date</label>
-                    <input type="text" id="filter-date-from" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" onclick="showDatePicker('filter-date-from')" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
+                    <label>${t('filters.from_date')}</label>
+                    <input type="text" id="filter-date-from" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" onclick="showDatePicker('filter-date-from')" class="input" placeholder="${t('date_format')}" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
                 </div>
                 <div class="form-group">
-                    <label>To Date</label>
-                    <input type="text" id="filter-date-to" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" onclick="showDatePicker('filter-date-to')" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
+                    <label>${t('filters.to_date')}</label>
+                    <input type="text" id="filter-date-to" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" onclick="showDatePicker('filter-date-to')" class="input" placeholder="${t('date_format')}" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
                 </div>
                 <div class="form-group" style="display: flex; align-items: flex-end;">
-                    <button onclick="clearFilters()" class="btn btn-secondary" style="width: 100%;">Clear Filters</button>
+                    <button onclick="clearFilters()" class="btn btn-secondary" style="width: 100%;">${t('filters.clear')}</button>
                 </div>
             </div>
         </div>
@@ -888,8 +911,8 @@ function ActionsList() {
     if (state.actions.length === 0) {
         return `
             <div class="card empty-state">
-                <p class="empty-state-title">No actions yet</p>
-                <p class="empty-state-text">Click the + button to add your first action</p>
+                <p class="empty-state-title">${t('empty.no_actions')}</p>
+                <p class="empty-state-text">${t('empty.click_add')}</p>
             </div>
         `;
     }
@@ -900,11 +923,11 @@ function ActionsList() {
                 <table>
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>User</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th class="text-right">Amount</th>
+                            <th>${t('table.date')}</th>
+                            <th>${t('table.user')}</th>
+                            <th>${t('table.type')}</th>
+                            <th>${t('table.description')}</th>
+                            <th class="text-right">${t('table.amount')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -914,7 +937,7 @@ function ActionsList() {
                                 <td>${action.name}</td>
                                 <td>
                                     <span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">
-                                        ${action.type}
+                                        ${action.type === 'income' ? t('filters.income') : t('filters.expense')}
                                     </span>
                                 </td>
                                 <td>${action.description}</td>
@@ -936,32 +959,32 @@ function AddActionModal() {
         <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()">
                 <div class="modal-header">
-                    <h2>Add Action</h2>
+                    <h2>${t('modal.add_action')}</h2>
                     <button onclick="closeModal()" class="modal-close">&times;</button>
                 </div>
                 <form onsubmit="handleAddAction(event)">
                     <div class="form-group">
-                        <label>Type</label>
+                        <label>${t('modal.type')}</label>
                         <select id="action-type" class="input">
-                            <option value="expense">Expense</option>
-                            <option value="income">Income</option>
+                            <option value="expense">${t('filters.expense')}</option>
+                            <option value="income">${t('filters.income')}</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Date</label>
-                        <input type="text" id="action-date" value="${today}" onclick="showDatePicker('action-date')" class="input" placeholder="DD/MM/YYYY" pattern="\\d{2}/\\d{2}/\\d{4}" readonly required>
+                        <label>${t('modal.date')}</label>
+                        <input type="text" id="action-date" value="${today}" onclick="showDatePicker('action-date')" class="input" placeholder="${t('date_format')}" pattern="\\d{2}/\\d{2}/\\d{4}" readonly required>
                     </div>
                     <div class="form-group">
-                        <label>Description</label>
+                        <label>${t('modal.description')}</label>
                         <input type="text" id="action-description" class="input" required>
                     </div>
                     <div class="form-group">
-                        <label>Amount</label>
+                        <label>${t('modal.amount')}</label>
                         <input type="number" id="action-amount" step="0.01" min="0.01" class="input" required>
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" class="btn btn-primary">Add Action</button>
-                        <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">${t('modal.submit')}</button>
+                        <button type="button" onclick="closeModal()" class="btn btn-secondary">${t('modal.cancel')}</button>
                     </div>
                 </form>
             </div>
@@ -989,7 +1012,7 @@ async function handleAddAction(event) {
     if (await createAction(actionData)) {
         closeModal();
     } else {
-        alert('Failed to create action');
+        alert(t('validation.failed_create'));
     }
 }
 
@@ -1009,7 +1032,7 @@ async function handleUpdateProfile(event) {
     if (!name) {
         state.profilePage.message = {
             type: 'error',
-            text: 'Name is required'
+            text: t('validation.name_required')
         };
         render();
         return;
@@ -1020,7 +1043,7 @@ async function handleUpdateProfile(event) {
         if (!currentPassword) {
             state.profilePage.message = {
                 type: 'error',
-                text: 'Current password is required when changing password'
+                text: t('validation.password_required')
             };
             render();
             return;
@@ -1029,7 +1052,7 @@ async function handleUpdateProfile(event) {
         if (newPassword.length < 6) {
             state.profilePage.message = {
                 type: 'error',
-                text: 'New password must be at least 6 characters'
+                text: t('validation.password_min')
             };
             render();
             return;
@@ -1038,7 +1061,7 @@ async function handleUpdateProfile(event) {
         if (newPassword !== confirmPassword) {
             state.profilePage.message = {
                 type: 'error',
-                text: 'New passwords do not match'
+                text: t('validation.passwords_match')
             };
             render();
             return;
@@ -1069,7 +1092,7 @@ async function handleUpdateProfile(event) {
         // Show success message
         state.profilePage.message = {
             type: 'success',
-            text: response.message || 'Profile updated successfully'
+            text: response.message || t('validation.success')
         };
 
         // Clear password fields
@@ -1088,7 +1111,7 @@ async function handleUpdateProfile(event) {
         // Show error message
         state.profilePage.message = {
             type: 'error',
-            text: response?.message || 'Failed to update profile'
+            text: response?.message || t('validation.error')
         };
     }
 

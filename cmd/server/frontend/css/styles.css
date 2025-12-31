@@ -169,6 +169,11 @@ header {
     background-color: var(--bg-secondary);
 }
 
+/* Language selector button */
+.icon-btn[title] {
+    font-size: 1rem;
+}
+
 /* User Menu */
 .user-menu-trigger {
     display: flex;
