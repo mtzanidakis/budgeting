@@ -1,0 +1,20 @@
+services:
+  budgeting-tsrp:
+    container_name: budgeting-tsrp
+    image: ghcr.io/mtzanidakis/tsrp
+    restart: always
+    user: 1000:1000
+    environment:
+      - BACKEND=http://budgeting-app:4666
+      - HOSTNAME=${HOSTNAME}
+      - TS_AUTHKEY=${TS_AUTHKEY}
+    volumes:
+      - ./config/tsrp:/var/lib/tsrp
+
+  budgeting-app:
+    image: ghcr.io/mtzanidakis/budgeting
+    restart: always
+    environment:
+      - TZ=Europe/Athens
+
+# vi: ft=yaml

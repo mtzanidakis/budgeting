@@ -1,18 +1,11 @@
-version: '3.8'
-
 services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
+  budgeting-app:
+    restart: unless-stopped
+    user: 1000:1000
     environment:
-      - PORT=8080
-      - DATABASE_PATH=/app/data/budgeting.db
+      - PORT=4666
+      - DATABASE_PATH=/data/budgeting.db
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
       - LOG_LEVEL=info
     volumes:
-      - db-data:/app/data
-    restart: unless-stopped
-
-volumes:
-  db-data:
+      - ./data:/data

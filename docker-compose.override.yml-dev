@@ -1,0 +1,7 @@
+services:
+  budgeting-app:
+    build: .
+    ports:
+      - "4666:4666"
+
+# vi: ft=yaml

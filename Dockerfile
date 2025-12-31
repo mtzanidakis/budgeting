@@ -30,10 +30,7 @@ COPY --from=builder /app/server /app/server
 COPY --from=builder /app/cli /app/cli
 
 # Create data directory
-RUN mkdir -p /app/data
-
-# Expose port
-EXPOSE 8080
+RUN mkdir -p /data
 
 # Run the server
 CMD ["/app/server"]
