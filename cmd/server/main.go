@@ -71,6 +71,7 @@ func main() {
 
 		r.Get("/api/me", authHandler.Me)
 		r.Post("/api/logout", authHandler.Logout)
+		r.Put("/api/profile", usersHandler.UpdateProfile)
 		r.Get("/api/actions", actionsHandler.List)
 		r.Post("/api/actions", actionsHandler.Create)
 		r.Get("/api/charts/monthly", actionsHandler.GetChartData)

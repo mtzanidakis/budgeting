@@ -35,6 +35,10 @@ const state = {
         chartData: null,
         chartInstance: null
     },
+    profilePage: {
+        message: null,
+        isSubmitting: false
+    },
     datePicker: {
         visible: false,
         targetInput: null,
@@ -361,6 +365,7 @@ function Header() {
                             <span>▼</span>
                         </button>
                         <div id="user-menu" class="user-menu-dropdown hidden">
+                            <button onclick="navigateTo('profile'); toggleUserMenu();">Profile</button>
                             <button onclick="logout()">Logout</button>
                         </div>
                     </div>
@@ -629,6 +634,119 @@ function ChartsDisplay() {
     `;
 }
 
+function ProfilePage() {
+    return `
+        <div>
+            ${Header()}
+            <main class="dashboard-main">
+                <div class="container">
+                    <div class="profile-container">
+                        <div class="card profile-card">
+                            <h2 class="profile-title">User Profile</h2>
+
+                            ${state.profilePage.message ? InlineMessage(state.profilePage.message) : ''}
+
+                            <form onsubmit="handleUpdateProfile(event)">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text"
+                                           value="${state.user?.username || ''}"
+                                           class="input"
+                                           disabled
+                                           style="opacity: 0.6; cursor: not-allowed;">
+                                    <small style="color: var(--text-secondary); font-size: 0.875rem;">Username cannot be changed</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Name <span style="color: var(--danger);">*</span></label>
+                                    <input type="text"
+                                           id="profile-name"
+                                           value="${state.user?.name || ''}"
+                                           class="input"
+                                           required
+                                           maxlength="100">
+                                </div>
+
+                                <div class="profile-section-divider">
+                                    <h3>Change Password</h3>
+                                    <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.25rem;">
+                                        Leave blank to keep current password
+                                    </p>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Current Password</label>
+                                    <input type="password"
+                                           id="profile-current-password"
+                                           class="input"
+                                           autocomplete="current-password">
+                                    <small style="color: var(--text-secondary); font-size: 0.875rem;">
+                                        Required when changing password
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>New Password</label>
+                                    <input type="password"
+                                           id="profile-new-password"
+                                           class="input"
+                                           minlength="6"
+                                           autocomplete="new-password">
+                                    <small style="color: var(--text-secondary); font-size: 0.875rem;">
+                                        Minimum 6 characters
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Confirm New Password</label>
+                                    <input type="password"
+                                           id="profile-confirm-password"
+                                           class="input"
+                                           autocomplete="new-password">
+                                </div>
+
+                                <div class="profile-actions">
+                                    <button type="submit"
+                                            class="btn btn-primary"
+                                            ${state.profilePage.isSubmitting ? 'disabled' : ''}>
+                                        ${state.profilePage.isSubmitting ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                    <button type="button"
+                                            onclick="navigateTo('dashboard')"
+                                            class="btn btn-secondary"
+                                            ${state.profilePage.isSubmitting ? 'disabled' : ''}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    `;
+}
+
+function InlineMessage(message) {
+    if (!message) return '';
+
+    const typeClass = message.type === 'success' ? 'message-success' : 'message-error';
+    const icon = message.type === 'success' ? '✓' : '✕';
+
+    return `
+        <div class="inline-message ${typeClass}">
+            <span class="message-icon">${icon}</span>
+            <span class="message-text">${message.text}</span>
+            <button onclick="dismissMessage()" class="message-dismiss" type="button">×</button>
+        </div>
+    `;
+}
+
+function dismissMessage() {
+    state.profilePage.message = null;
+    render();
+}
+
 function renderChart() {
     if (state.currentPage !== 'charts' || !state.chartsPage.chartData) {
         return;
@@ -875,6 +993,108 @@ async function handleAddAction(event) {
     }
 }
 
+async function handleUpdateProfile(event) {
+    event.preventDefault();
+
+    // Get form values
+    const name = document.getElementById('profile-name').value.trim();
+    const currentPassword = document.getElementById('profile-current-password').value;
+    const newPassword = document.getElementById('profile-new-password').value;
+    const confirmPassword = document.getElementById('profile-confirm-password').value;
+
+    // Clear previous message
+    state.profilePage.message = null;
+
+    // Frontend validation
+    if (!name) {
+        state.profilePage.message = {
+            type: 'error',
+            text: 'Name is required'
+        };
+        render();
+        return;
+    }
+
+    // If new password is provided, validate
+    if (newPassword) {
+        if (!currentPassword) {
+            state.profilePage.message = {
+                type: 'error',
+                text: 'Current password is required when changing password'
+            };
+            render();
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            state.profilePage.message = {
+                type: 'error',
+                text: 'New password must be at least 6 characters'
+            };
+            render();
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            state.profilePage.message = {
+                type: 'error',
+                text: 'New passwords do not match'
+            };
+            render();
+            return;
+        }
+    }
+
+    // Set submitting state
+    state.profilePage.isSubmitting = true;
+    render();
+
+    // Prepare request data
+    const profileData = {
+        name: name,
+        current_password: currentPassword,
+        new_password: newPassword
+    };
+
+    // Call API
+    const response = await updateProfile(profileData);
+
+    // Reset submitting state
+    state.profilePage.isSubmitting = false;
+
+    if (response && response.success) {
+        // Update user in state with new name
+        state.user.name = response.user.name;
+
+        // Show success message
+        state.profilePage.message = {
+            type: 'success',
+            text: response.message || 'Profile updated successfully'
+        };
+
+        // Clear password fields
+        document.getElementById('profile-current-password').value = '';
+        document.getElementById('profile-new-password').value = '';
+        document.getElementById('profile-confirm-password').value = '';
+
+        // Auto-dismiss success message after 5 seconds
+        setTimeout(() => {
+            if (state.profilePage.message?.type === 'success') {
+                state.profilePage.message = null;
+                render();
+            }
+        }, 5000);
+    } else {
+        // Show error message
+        state.profilePage.message = {
+            type: 'error',
+            text: response?.message || 'Failed to update profile'
+        };
+    }
+
+    render();
+}
+
 function updateFilter(key, value) {
     state.filters[key] = value;
     loadActions();
@@ -894,13 +1114,22 @@ function clearFilters() {
 // All Actions Page Navigation and Filters
 function navigateTo(page) {
     state.currentPage = page;
+
+    // Clear profile message when navigating away
+    if (page !== 'profile') {
+        state.profilePage.message = null;
+    }
+
     if (page === 'all-actions') {
         loadAllActions();
     } else if (page === 'dashboard') {
         loadActions();
     } else if (page === 'charts') {
         loadChartData();
+    } else if (page === 'profile') {
+        // No data loading needed - user info already in state
     }
+
     render();
 }
 
@@ -992,6 +1221,14 @@ function updateChartYear(year) {
     loadChartData();
 }
 
+async function updateProfile(profileData) {
+    const data = await api('/api/profile', {
+        method: 'PUT',
+        body: JSON.stringify(profileData)
+    });
+    return data;
+}
+
 function calculatePageNumbers(current, total) {
     const pages = new Set();
     pages.add(1);
@@ -1035,6 +1272,8 @@ function render() {
         } else if (state.currentPage === 'charts') {
             app.innerHTML = ChartsPage();
             renderChart();
+        } else if (state.currentPage === 'profile') {
+            app.innerHTML = ProfilePage();
         } else {
             app.innerHTML = Dashboard();
         }
