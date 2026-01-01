@@ -4,12 +4,6 @@ const state = {
     language: localStorage.getItem('language') || 'en',
     actions: [],
     users: [],
-    filters: {
-        username: '',
-        type: '',
-        date_from: '',
-        date_to: ''
-    },
     theme: localStorage.getItem('theme') || 'light',
     currency: '€',
     currentPage: 'dashboard',
@@ -290,10 +284,6 @@ async function checkSession() {
 // Data loading
 async function loadActions() {
     const params = new URLSearchParams();
-    if (state.filters.username) params.append('username', state.filters.username);
-    if (state.filters.type) params.append('type', state.filters.type);
-    if (state.filters.date_from) params.append('date_from', formatDateToISO(state.filters.date_from));
-    if (state.filters.date_to) params.append('date_to', formatDateToISO(state.filters.date_to));
     params.append('limit', '10');
 
     const data = await api(`/api/actions?${params}`);
@@ -485,7 +475,6 @@ function Dashboard() {
             ${Header()}
             <main class="dashboard-main">
                 <div class="container">
-                    ${Filters()}
                     ${ActionsList()}
                 </div>
             </main>
@@ -973,45 +962,6 @@ function renderChart() {
     }, 0);
 }
 
-function Filters() {
-    return `
-        <div class="card filters-card mb-6">
-            <div class="filter-grid">
-                <div class="form-group">
-                    <label>${t('filters.user')}</label>
-                    <select onchange="updateFilter('username', this.value)" class="input">
-                        <option value="">${t('filters.all_users')}</option>
-                        ${state.users.map(u => `
-                            <option value="${u.username}" ${state.filters.username === u.username ? 'selected' : ''}>
-                                ${u.name}
-                            </option>
-                        `).join('')}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>${t('filters.type')}</label>
-                    <select onchange="updateFilter('type', this.value)" class="input">
-                        <option value="">${t('filters.all')}</option>
-                        <option value="income" ${state.filters.type === 'income' ? 'selected' : ''}>${t('filters.income')}</option>
-                        <option value="expense" ${state.filters.type === 'expense' ? 'selected' : ''}>${t('filters.expense')}</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>${t('filters.from_date')}</label>
-                    <input type="text" id="filter-date-from" value="${state.filters.date_from}" onchange="updateFilter('date_from', this.value)" onclick="showDatePicker('filter-date-from')" class="input" placeholder="${t('date_format')}" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
-                </div>
-                <div class="form-group">
-                    <label>${t('filters.to_date')}</label>
-                    <input type="text" id="filter-date-to" value="${state.filters.date_to}" onchange="updateFilter('date_to', this.value)" onclick="showDatePicker('filter-date-to')" class="input" placeholder="${t('date_format')}" pattern="\\d{2}/\\d{2}/\\d{4}" readonly>
-                </div>
-                <div class="form-group" style="display: flex; align-items: flex-end;">
-                    <button onclick="clearFilters()" class="btn btn-secondary" style="width: 100%;">${t('filters.clear')}</button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
 function ActionsList() {
     if (state.actions.length === 0) {
         return `
@@ -1330,22 +1280,6 @@ async function handleUpdateProfile(event) {
         };
     }
 
-    render();
-}
-
-function updateFilter(key, value) {
-    state.filters[key] = value;
-    loadActions();
-}
-
-function clearFilters() {
-    state.filters = {
-        username: '',
-        type: '',
-        date_from: '',
-        date_to: ''
-    };
-    loadActions();
     render();
 }
 
