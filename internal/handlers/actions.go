@@ -70,6 +70,7 @@ func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 		Type:     query.Get("type"),
 		DateFrom: query.Get("date_from"),
 		DateTo:   query.Get("date_to"),
+		Search:   query.Get("search"),
 		Limit:    20,
 	}
 

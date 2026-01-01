@@ -22,7 +22,8 @@ const state = {
             username: '',
             type: '',
             date_from: '',
-            date_to: ''
+            date_to: '',
+            search: ''
         },
         pagination: {
             currentPage: 1,
@@ -532,6 +533,15 @@ function MonthFilter() {
     const years = Array.from({length: 10}, (_, i) => currentYear - i);
 
     return `
+        <div class="form-group mb-4">
+            <label>${t('filters.search')}</label>
+            <input type="text"
+                   value="${state.allActionsPage.filters.search}"
+                   oninput="updateAllActionsSearch(this.value)"
+                   class="input"
+                   placeholder="${t('filters.search_placeholder')}" />
+        </div>
+
         <div class="filter-grid">
             <div class="form-group">
                 <label>${t('filters.month')}</label>
@@ -561,6 +571,15 @@ function MonthFilter() {
 
 function CustomRangeFilters() {
     return `
+        <div class="form-group mb-4">
+            <label>${t('filters.search')}</label>
+            <input type="text"
+                   value="${state.allActionsPage.filters.search}"
+                   oninput="updateAllActionsSearch(this.value)"
+                   class="input"
+                   placeholder="${t('filters.search_placeholder')}" />
+        </div>
+
         <div class="filter-grid">
             ${UserAndTypeFilters('all-actions')}
             <div class="form-group">
@@ -1379,7 +1398,19 @@ function updateAllActionsFilter(key, value) {
     loadAllActions();
 }
 
+// Debounced search to avoid excessive API calls
+let searchTimeout;
+function updateAllActionsSearch(value) {
+    state.allActionsPage.filters.search = value;
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        state.allActionsPage.pagination.currentPage = 1;
+        loadAllActions();
+    }, 500);
+}
+
 function clearAllActionsFilters() {
+    clearTimeout(searchTimeout);
     const now = new Date();
     state.allActionsPage.filters = {
         mode: 'month',
@@ -1388,7 +1419,8 @@ function clearAllActionsFilters() {
         username: '',
         type: '',
         date_from: '',
-        date_to: ''
+        date_to: '',
+        search: ''
     };
     state.allActionsPage.pagination.currentPage = 1;
     setMonthDateRange();
@@ -1414,6 +1446,7 @@ async function loadAllActions() {
     if (filters.date_to) params.append('date_to', formatDateToISO(filters.date_to));
     if (filters.username) params.append('username', filters.username);
     if (filters.type) params.append('type', filters.type);
+    if (filters.search) params.append('search', filters.search);
 
     const data = await api(`/api/actions?${params}`);
     if (data) {

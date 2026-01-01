@@ -33,6 +33,8 @@ const translations = {
         'filters.custom_range': 'Custom Range',
         'filters.month': 'Month',
         'filters.year': 'Year',
+        'filters.search': 'Search',
+        'filters.search_placeholder': 'Search in descriptions...',
 
         // Table Headers
         'table.date': 'Date',
@@ -141,6 +143,8 @@ const translations = {
         'filters.custom_range': 'Προσαρμοσμένο Εύρος',
         'filters.month': 'Μήνας',
         'filters.year': 'Έτος',
+        'filters.search': 'Αναζήτηση',
+        'filters.search_placeholder': 'Αναζήτηση στις περιγραφές...',
 
         // Table Headers
         'table.date': 'Ημερομηνία',

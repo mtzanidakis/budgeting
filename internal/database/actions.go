@@ -15,6 +15,7 @@ type ActionFilters struct {
 	DateTo    string
 	Limit     int
 	Offset    int
+	Search    string
 }
 
 type MonthlySummary struct {
@@ -74,6 +75,12 @@ func (db *DB) ListActions(filters ActionFilters) ([]*models.Action, error) {
 	if filters.DateTo != "" {
 		conditions = append(conditions, "date <= ?")
 		args = append(args, filters.DateTo)
+	}
+
+	if filters.Search != "" {
+		// Use custom lower_unicode function for proper Greek/Unicode case-insensitive search
+		conditions = append(conditions, "lower_unicode(description) LIKE lower_unicode(?)")
+		args = append(args, "%"+filters.Search+"%")
 	}
 
 	if len(conditions) > 0 {
@@ -136,6 +143,12 @@ func (db *DB) CountActions(filters ActionFilters) (int, error) {
 	if filters.DateTo != "" {
 		conditions = append(conditions, "date <= ?")
 		args = append(args, filters.DateTo)
+	}
+
+	if filters.Search != "" {
+		// Use custom lower_unicode function for proper Greek/Unicode case-insensitive search
+		conditions = append(conditions, "lower_unicode(description) LIKE lower_unicode(?)")
+		args = append(args, "%"+filters.Search+"%")
 	}
 
 	if len(conditions) > 0 {
