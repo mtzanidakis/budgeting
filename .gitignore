@@ -18,6 +18,7 @@ bin/
 *.db-wal
 *.db-shm
 data/
+config/
 
 # Environment files
 .env
