@@ -506,6 +506,7 @@ function AllActionsPage() {
                     ${Pagination()}
                 </div>
             </main>
+            <div id="modal-container"></div>
         </div>
     `;
 }
@@ -699,6 +700,7 @@ function ChartsPage() {
                     ${ChartsDisplay()}
                 </div>
             </main>
+            <div id="modal-container"></div>
         </div>
     `;
 }
@@ -829,6 +831,7 @@ function ProfilePage() {
                     </div>
                 </div>
             </main>
+            <div id="modal-container"></div>
         </div>
     `;
 }
@@ -1160,7 +1163,12 @@ function openEditActionModal(actionId) {
             visible: true,
             action: action
         };
-        document.getElementById('modal-container').innerHTML = EditActionModal();
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.innerHTML = EditActionModal();
+        } else {
+            console.error('Modal container not found - cannot display edit modal');
+        }
     }
 }
 
