@@ -18,6 +18,7 @@ type Action struct {
 	Date        string     `json:"date"` // YYYY-MM-DD format
 	Description string     `json:"description"`
 	Amount      float64    `json:"amount"`
+	CategoryID  *int64     `json:"category_id,omitempty"` // Optional foreign key to categories
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 }

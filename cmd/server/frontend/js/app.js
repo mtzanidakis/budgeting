@@ -4,6 +4,7 @@ const state = {
     language: localStorage.getItem('language') || 'en',
     actions: [],
     users: [],
+    categories: [],
     theme: localStorage.getItem('theme') || 'light',
     currency: '€',
     currentPage: 'dashboard',
@@ -44,6 +45,13 @@ const state = {
     editActionModal: {
         visible: false,
         action: null
+    },
+    categoriesPage: {
+        categories: [],
+        editCategoryModal: {
+            visible: false,
+            category: null
+        }
     },
     mobileMenuOpen: false
 };
@@ -276,6 +284,7 @@ async function checkSession() {
         state.user = data.user;
         await loadActions();
         await loadUsers();
+        await loadCategories();
         setMonthDateRange();
     }
     render();
@@ -297,6 +306,64 @@ async function loadUsers() {
     const data = await api('/api/users');
     if (data) {
         state.users = data;
+    }
+}
+
+async function loadCategories(actionType = '') {
+    const params = new URLSearchParams();
+    if (actionType) params.append('action_type', actionType);
+
+    const data = await api(`/api/categories?${params}`);
+    if (data) {
+        state.categories = data;
+        return data;
+    }
+    return [];
+}
+
+async function createCategory(categoryData) {
+    const data = await api('/api/categories', {
+        method: 'POST',
+        body: JSON.stringify(categoryData)
+    });
+
+    if (data && data.id) {
+        await loadAllCategories();
+        return true;
+    }
+    return false;
+}
+
+async function updateCategory(categoryId, categoryData) {
+    const data = await api(`/api/categories/${categoryId}`, {
+        method: 'PUT',
+        body: JSON.stringify(categoryData)
+    });
+
+    if (data && data.id) {
+        await loadAllCategories();
+        return true;
+    }
+    return false;
+}
+
+async function deleteCategory(categoryId) {
+    const data = await api(`/api/categories/${categoryId}`, {
+        method: 'DELETE'
+    });
+
+    if (data) {
+        await loadAllCategories();
+        return true;
+    }
+    return false;
+}
+
+async function loadAllCategories() {
+    const data = await api('/api/categories');
+    if (data) {
+        state.categoriesPage.categories = data;
+        render();
     }
 }
 
@@ -397,6 +464,10 @@ function Header() {
                        class="nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
                         ${t('nav.all_actions')}
                     </a>
+                    <a href="#" onclick="navigateTo('categories'); return false;"
+                       class="nav-link ${state.currentPage === 'categories' ? 'active' : ''}">
+                        ${t('nav.categories')}
+                    </a>
                     <a href="#" onclick="navigateTo('charts'); return false;"
                        class="nav-link ${state.currentPage === 'charts' ? 'active' : ''}">
                         ${t('nav.charts')}
@@ -440,6 +511,10 @@ function Header() {
                         <a href="#" onclick="navigateTo('all-actions'); toggleMobileMenu(); return false;"
                            class="mobile-nav-link ${state.currentPage === 'all-actions' ? 'active' : ''}">
                             ${t('nav.all_actions')}
+                        </a>
+                        <a href="#" onclick="navigateTo('categories'); toggleMobileMenu(); return false;"
+                           class="mobile-nav-link ${state.currentPage === 'categories' ? 'active' : ''}">
+                            ${t('nav.categories')}
                         </a>
                         <a href="#" onclick="navigateTo('charts'); toggleMobileMenu(); return false;"
                            class="mobile-nav-link ${state.currentPage === 'charts' ? 'active' : ''}">
@@ -641,21 +716,25 @@ function AllActionsTable() {
                             <th>${t('table.user')}</th>
                             <th>${t('table.type')}</th>
                             <th>${t('table.description')}</th>
+                            <th>${t('table.category')}</th>
                             <th class="text-right">${t('table.amount')}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${actions.map(action => `
+                        ${actions.map(action => {
+                            const category = action.category_id ? state.categories.find(c => c.id === action.category_id) : null;
+                            return `
                             <tr class="${action.user_id === state.user.id ? 'action-row-editable' : ''}" ${action.user_id === state.user.id ? `onclick="openEditActionModal(${action.id})"` : ''}>
                                 <td>${formatDateForDisplay(action.date)}</td>
                                 <td>${action.name}</td>
                                 <td><span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">${action.type === 'income' ? t('filters.income') : t('filters.expense')}</span></td>
                                 <td>${action.description}</td>
+                                <td>${category ? category.description : '-'}</td>
                                 <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
                                     ${action.type === 'income' ? '+' : '-'}${state.currency}${action.amount.toFixed(2)}
                                 </td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             </div>
@@ -746,6 +825,122 @@ function ChartsDisplay() {
     return `
         <div class="card" style="padding: 2rem;">
             <canvas id="monthly-chart"></canvas>
+        </div>
+    `;
+}
+
+function CategoriesPage() {
+    return `
+        <div>
+            ${Header()}
+            <main class="dashboard-main">
+                <div class="container">
+                    ${CategoriesTable()}
+                </div>
+            </main>
+
+            <button class="floating-button" onclick="openAddCategoryModal()">+</button>
+            <div id="modal-container"></div>
+        </div>
+    `;
+}
+
+function CategoriesTable() {
+    const categories = state.categoriesPage.categories;
+
+    if (categories.length === 0) {
+        return `
+            <div class="card empty-state">
+                <p class="empty-state-title">${t('categories.empty_title')}</p>
+                <p class="empty-state-text">${t('categories.empty_text')}</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="card">
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>${t('categories.description')}</th>
+                            <th>${t('categories.type')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${categories.map(category => `
+                            <tr class="action-row-editable" onclick="openEditCategoryModal(${category.id})">
+                                <td>${category.description}</td>
+                                <td><span class="badge ${category.action_type === 'income' ? 'badge-success' : 'badge-danger'}">${category.action_type === 'income' ? t('filters.income') : t('filters.expense')}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function AddCategoryModal() {
+    return `
+        <div class="modal-overlay" onclick="closeCategoryModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2>${t('categories.add')}</h2>
+                    <button onclick="closeCategoryModal()" class="modal-close">&times;</button>
+                </div>
+                <form onsubmit="handleAddCategory(event)">
+                    <div class="form-group">
+                        <label>${t('categories.type')}</label>
+                        <select id="category-action-type" class="input">
+                            <option value="expense">${t('filters.expense')}</option>
+                            <option value="income">${t('filters.income')}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>${t('categories.description')}</label>
+                        <input type="text" id="category-description" class="input" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">${t('modal.submit')}</button>
+                        <button type="button" onclick="closeCategoryModal()" class="btn btn-secondary">${t('modal.cancel')}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function EditCategoryModal() {
+    const category = state.categoriesPage.editCategoryModal.category;
+    if (!category) return '';
+
+    return `
+        <div class="modal-overlay" onclick="closeEditCategoryModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2>${t('categories.edit')}</h2>
+                    <button onclick="closeEditCategoryModal()" class="modal-close">&times;</button>
+                </div>
+                <form onsubmit="handleEditCategory(event)">
+                    <div class="form-group">
+                        <label>${t('categories.type')}</label>
+                        <select id="edit-category-action-type" class="input">
+                            <option value="expense" ${category.action_type === 'expense' ? 'selected' : ''}>${t('filters.expense')}</option>
+                            <option value="income" ${category.action_type === 'income' ? 'selected' : ''}>${t('filters.income')}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>${t('categories.description')}</label>
+                        <input type="text" id="edit-category-description" value="${category.description}" class="input" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">${t('modal.save')}</button>
+                        <button type="button" onclick="handleDeleteCategory(${category.id})" class="btn btn-danger">${t('modal.delete')}</button>
+                        <button type="button" onclick="closeEditCategoryModal()" class="btn btn-secondary">${t('modal.cancel')}</button>
+                    </div>
+                </form>
+            </div>
         </div>
     `;
 }
@@ -982,11 +1177,14 @@ function ActionsList() {
                             <th>${t('table.user')}</th>
                             <th>${t('table.type')}</th>
                             <th>${t('table.description')}</th>
+                            <th>${t('table.category')}</th>
                             <th class="text-right">${t('table.amount')}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${state.actions.map(action => `
+                        ${state.actions.map(action => {
+                            const category = action.category_id ? state.categories.find(c => c.id === action.category_id) : null;
+                            return `
                             <tr class="${action.user_id === state.user.id ? 'action-row-editable' : ''}" ${action.user_id === state.user.id ? `onclick="openEditActionModal(${action.id})"` : ''}>
                                 <td>${formatDateForDisplay(action.date)}</td>
                                 <td>${action.name}</td>
@@ -996,11 +1194,12 @@ function ActionsList() {
                                     </span>
                                 </td>
                                 <td>${action.description}</td>
+                                <td>${category ? category.description : '-'}</td>
                                 <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
                                     ${action.type === 'income' ? '+' : '-'}${state.currency}${action.amount.toFixed(2)}
                                 </td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             </div>
@@ -1015,6 +1214,8 @@ function ActionsList() {
 
 function AddActionModal() {
     const today = getTodayFormatted();
+    const expenseCategories = state.categories.filter(c => c.action_type === 'expense');
+
     return `
         <div class="modal-overlay" onclick="closeModal(event)">
             <div class="modal-content" onclick="event.stopPropagation()">
@@ -1025,9 +1226,16 @@ function AddActionModal() {
                 <form onsubmit="handleAddAction(event)">
                     <div class="form-group">
                         <label>${t('modal.type')}</label>
-                        <select id="action-type" class="input">
+                        <select id="action-type" class="input" onchange="updateActionTypeCategories()">
                             <option value="expense">${t('filters.expense')}</option>
                             <option value="income">${t('filters.income')}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>${t('categories.category_optional')}</label>
+                        <select id="action-category" class="input">
+                            <option value="">${t('categories.none')}</option>
+                            ${expenseCategories.map(c => `<option value="${c.id}">${c.description}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group">
@@ -1057,6 +1265,7 @@ function EditActionModal() {
     if (!action) return '';
 
     const displayDate = formatDateForDisplay(action.date);
+    const actionCategories = state.categories.filter(c => c.action_type === action.type);
 
     return `
         <div class="modal-overlay" onclick="closeEditModal(event)">
@@ -1068,9 +1277,16 @@ function EditActionModal() {
                 <form onsubmit="handleEditAction(event)">
                     <div class="form-group">
                         <label>${t('modal.type')}</label>
-                        <select id="edit-action-type" class="input">
+                        <select id="edit-action-type" class="input" onchange="updateEditActionTypeCategories()">
                             <option value="expense" ${action.type === 'expense' ? 'selected' : ''}>${t('filters.expense')}</option>
                             <option value="income" ${action.type === 'income' ? 'selected' : ''}>${t('filters.income')}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>${t('categories.category_optional')}</label>
+                        <select id="edit-action-category" class="input">
+                            <option value="">${t('categories.none')}</option>
+                            ${actionCategories.map(c => `<option value="${c.id}" ${action.category_id === c.id ? 'selected' : ''}>${c.description}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group">
@@ -1104,13 +1320,33 @@ function handleLogin(event) {
     login(username, password);
 }
 
+function updateActionTypeCategories() {
+    const actionType = document.getElementById('action-type').value;
+    const categorySelect = document.getElementById('action-category');
+    const categories = state.categories.filter(c => c.action_type === actionType);
+
+    categorySelect.innerHTML = `<option value="">${t('categories.none')}</option>` +
+        categories.map(c => `<option value="${c.id}">${c.description}</option>`).join('');
+}
+
+function updateEditActionTypeCategories() {
+    const actionType = document.getElementById('edit-action-type').value;
+    const categorySelect = document.getElementById('edit-action-category');
+    const categories = state.categories.filter(c => c.action_type === actionType);
+
+    categorySelect.innerHTML = `<option value="">${t('categories.none')}</option>` +
+        categories.map(c => `<option value="${c.id}">${c.description}</option>`).join('');
+}
+
 async function handleAddAction(event) {
     event.preventDefault();
+    const categoryValue = document.getElementById('action-category').value;
     const actionData = {
         type: document.getElementById('action-type').value,
         date: formatDateToISO(document.getElementById('action-date').value),
         description: document.getElementById('action-description').value,
-        amount: parseFloat(document.getElementById('action-amount').value)
+        amount: parseFloat(document.getElementById('action-amount').value),
+        category_id: categoryValue ? parseInt(categoryValue) : null
     };
 
     if (await createAction(actionData)) {
@@ -1155,11 +1391,13 @@ function closeEditModal(event) {
 async function handleEditAction(event) {
     event.preventDefault();
 
+    const categoryValue = document.getElementById('edit-action-category').value;
     const actionData = {
         type: document.getElementById('edit-action-type').value,
         date: formatDateToISO(document.getElementById('edit-action-date').value),
         description: document.getElementById('edit-action-description').value,
-        amount: parseFloat(document.getElementById('edit-action-amount').value)
+        amount: parseFloat(document.getElementById('edit-action-amount').value),
+        category_id: categoryValue ? parseInt(categoryValue) : null
     };
 
     if (await updateAction(state.editActionModal.action.id, actionData)) {
@@ -1283,6 +1521,82 @@ async function handleUpdateProfile(event) {
     render();
 }
 
+// Category event handlers
+async function handleAddCategory(event) {
+    event.preventDefault();
+    const categoryData = {
+        action_type: document.getElementById('category-action-type').value,
+        description: document.getElementById('category-description').value
+    };
+
+    if (await createCategory(categoryData)) {
+        closeCategoryModal();
+    } else {
+        alert(t('categories.failed_create'));
+    }
+}
+
+function openEditCategoryModal(categoryId) {
+    const category = state.categoriesPage.categories.find(c => c.id === categoryId);
+    if (category) {
+        state.categoriesPage.editCategoryModal = {
+            visible: true,
+            category: category
+        };
+        const modalContainer = document.getElementById('modal-container');
+        if (modalContainer) {
+            modalContainer.innerHTML = EditCategoryModal();
+        }
+    }
+}
+
+function closeEditCategoryModal(event) {
+    if (event && event.target !== event.currentTarget) {
+        return;
+    }
+    state.categoriesPage.editCategoryModal = {
+        visible: false,
+        category: null
+    };
+    document.getElementById('modal-container').innerHTML = '';
+}
+
+async function handleEditCategory(event) {
+    event.preventDefault();
+    const categoryData = {
+        action_type: document.getElementById('edit-category-action-type').value,
+        description: document.getElementById('edit-category-description').value
+    };
+
+    if (await updateCategory(state.categoriesPage.editCategoryModal.category.id, categoryData)) {
+        closeEditCategoryModal();
+    } else {
+        alert(t('categories.failed_update'));
+    }
+}
+
+async function handleDeleteCategory(categoryId) {
+    if (!confirm(t('categories.delete_confirm'))) {
+        return;
+    }
+
+    if (await deleteCategory(categoryId)) {
+        closeEditCategoryModal();
+    } else {
+        alert(t('categories.failed_delete'));
+    }
+}
+
+function openAddCategoryModal() {
+    document.getElementById('modal-container').innerHTML = AddCategoryModal();
+}
+
+function closeCategoryModal(event) {
+    if (!event || event.target.classList.contains('modal-overlay')) {
+        document.getElementById('modal-container').innerHTML = '';
+    }
+}
+
 // All Actions Page Navigation and Filters
 function navigateTo(page) {
     state.currentPage = page;
@@ -1300,6 +1614,8 @@ function navigateTo(page) {
         loadChartData();
     } else if (page === 'profile') {
         // No data loading needed - user info already in state
+    } else if (page === 'categories') {
+        loadAllCategories();
     }
 
     render();
@@ -1471,6 +1787,8 @@ function render() {
             renderChart();
         } else if (state.currentPage === 'profile') {
             app.innerHTML = ProfilePage();
+        } else if (state.currentPage === 'categories') {
+            app.innerHTML = CategoriesPage();
         } else {
             app.innerHTML = Dashboard();
         }

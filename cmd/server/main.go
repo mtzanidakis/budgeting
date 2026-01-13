@@ -53,6 +53,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(db, sessionStore)
 	actionsHandler := handlers.NewActionsHandler(db)
 	usersHandler := handlers.NewUsersHandler(db)
+	categoriesHandler := handlers.NewCategoriesHandler(db)
 	configHandler := handlers.NewConfigHandler(cfg.Currency)
 
 	// Set up router
@@ -78,6 +79,10 @@ func main() {
 		r.Delete("/api/actions/{id}", actionsHandler.Delete)
 		r.Get("/api/charts/monthly", actionsHandler.GetChartData)
 		r.Get("/api/users", usersHandler.List)
+		r.Get("/api/categories", categoriesHandler.List)
+		r.Post("/api/categories", categoriesHandler.Create)
+		r.Put("/api/categories/{id}", categoriesHandler.Update)
+		r.Delete("/api/categories/{id}", categoriesHandler.Delete)
 	})
 
 	// Serve static files (SPA fallback to index.html)

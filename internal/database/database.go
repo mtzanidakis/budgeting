@@ -56,6 +56,13 @@ func (db *DB) Migrate() error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS categories (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			description TEXT NOT NULL,
+			action_type TEXT NOT NULL CHECK(action_type IN ('income', 'expense')),
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 		`CREATE TABLE IF NOT EXISTS actions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			user_id INTEGER NOT NULL,
@@ -63,18 +70,44 @@ func (db *DB) Migrate() error {
 			date DATE NOT NULL,
 			description TEXT NOT NULL,
 			amount REAL NOT NULL,
+			category_id INTEGER,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+			FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_actions_user_id ON actions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_actions_date ON actions(date)`,
 		`CREATE INDEX IF NOT EXISTS idx_actions_type ON actions(type)`,
+		`CREATE INDEX IF NOT EXISTS idx_categories_action_type ON categories(action_type)`,
 	}
 
 	for _, query := range queries {
 		if _, err := db.Exec(query); err != nil {
 			return fmt.Errorf("migration failed: %w", err)
+		}
+	}
+
+	// Add category_id column to existing actions table if it doesn't exist
+	var columnExists bool
+	err := db.QueryRow(`
+		SELECT COUNT(*) > 0
+		FROM pragma_table_info('actions')
+		WHERE name='category_id'
+	`).Scan(&columnExists)
+
+	if err != nil {
+		return fmt.Errorf("failed to check for category_id column: %w", err)
+	}
+
+	if !columnExists {
+		if _, err := db.Exec(`ALTER TABLE actions ADD COLUMN category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL`); err != nil {
+			return fmt.Errorf("failed to add category_id column: %w", err)
+		}
+
+		// Create index for the new column
+		if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_actions_category_id ON actions(category_id)`); err != nil {
+			return fmt.Errorf("failed to create category_id index: %w", err)
 		}
 	}
 

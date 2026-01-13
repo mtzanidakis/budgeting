@@ -25,11 +25,11 @@ type MonthlySummary struct {
 	Expense float64 `json:"expense"`
 }
 
-func (db *DB) CreateAction(userID int64, actionType models.ActionType, date, description string, amount float64) (*models.Action, error) {
+func (db *DB) CreateAction(userID int64, actionType models.ActionType, date, description string, amount float64, categoryID *int64) (*models.Action, error) {
 	now := time.Now()
 	result, err := db.Exec(
-		"INSERT INTO actions (user_id, type, date, description, amount, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		userID, actionType, date, description, amount, now, now,
+		"INSERT INTO actions (user_id, type, date, description, amount, category_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		userID, actionType, date, description, amount, categoryID, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create action: %w", err)
@@ -47,13 +47,14 @@ func (db *DB) CreateAction(userID int64, actionType models.ActionType, date, des
 		Date:        date,
 		Description: description,
 		Amount:      amount,
+		CategoryID:  categoryID,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}, nil
 }
 
 func (db *DB) ListActions(filters ActionFilters) ([]*models.Action, error) {
-	query := "SELECT id, user_id, type, date, description, amount, created_at, updated_at FROM actions"
+	query := "SELECT id, user_id, type, date, description, amount, category_id, created_at, updated_at FROM actions"
 	var conditions []string
 	var args []interface{}
 
@@ -110,7 +111,7 @@ func (db *DB) ListActions(filters ActionFilters) ([]*models.Action, error) {
 		var action models.Action
 		if err := rows.Scan(
 			&action.ID, &action.UserID, &action.Type, &action.Date,
-			&action.Description, &action.Amount, &action.CreatedAt, &action.UpdatedAt,
+			&action.Description, &action.Amount, &action.CategoryID, &action.CreatedAt, &action.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan action: %w", err)
 		}
@@ -198,11 +199,11 @@ func (db *DB) GetMonthlySummary(year int) ([]MonthlySummary, error) {
 func (db *DB) GetActionByID(actionID int64) (*models.Action, error) {
 	var action models.Action
 	err := db.QueryRow(
-		"SELECT id, user_id, type, date, description, amount, created_at, updated_at FROM actions WHERE id = ?",
+		"SELECT id, user_id, type, date, description, amount, category_id, created_at, updated_at FROM actions WHERE id = ?",
 		actionID,
 	).Scan(
 		&action.ID, &action.UserID, &action.Type, &action.Date,
-		&action.Description, &action.Amount, &action.CreatedAt, &action.UpdatedAt,
+		&action.Description, &action.Amount, &action.CategoryID, &action.CreatedAt, &action.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get action: %w", err)
@@ -211,11 +212,11 @@ func (db *DB) GetActionByID(actionID int64) (*models.Action, error) {
 	return &action, nil
 }
 
-func (db *DB) UpdateAction(actionID, userID int64, actionType models.ActionType, date, description string, amount float64) (*models.Action, error) {
+func (db *DB) UpdateAction(actionID, userID int64, actionType models.ActionType, date, description string, amount float64, categoryID *int64) (*models.Action, error) {
 	now := time.Now()
 	result, err := db.Exec(
-		"UPDATE actions SET type = ?, date = ?, description = ?, amount = ?, updated_at = ? WHERE id = ? AND user_id = ?",
-		actionType, date, description, amount, now, actionID, userID,
+		"UPDATE actions SET type = ?, date = ?, description = ?, amount = ?, category_id = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+		actionType, date, description, amount, categoryID, now, actionID, userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update action: %w", err)
@@ -237,6 +238,7 @@ func (db *DB) UpdateAction(actionID, userID int64, actionType models.ActionType,
 		Date:        date,
 		Description: description,
 		Amount:      amount,
+		CategoryID:  categoryID,
 		UpdatedAt:   now,
 	}, nil
 }

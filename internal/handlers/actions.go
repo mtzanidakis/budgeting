@@ -25,6 +25,7 @@ type CreateActionRequest struct {
 	Date        string  `json:"date"`
 	Description string  `json:"description"`
 	Amount      float64 `json:"amount"`
+	CategoryID  *int64  `json:"category_id,omitempty"`
 }
 
 type UpdateActionRequest struct {
@@ -32,6 +33,7 @@ type UpdateActionRequest struct {
 	Date        string  `json:"date"`
 	Description string  `json:"description"`
 	Amount      float64 `json:"amount"`
+	CategoryID  *int64  `json:"category_id,omitempty"`
 }
 
 type ActionResponse struct {
@@ -43,6 +45,7 @@ type ActionResponse struct {
 	Date        string  `json:"date"`
 	Description string  `json:"description"`
 	Amount      float64 `json:"amount"`
+	CategoryID  *int64  `json:"category_id,omitempty"`
 	CreatedAt   string  `json:"created_at"`
 }
 
@@ -114,6 +117,7 @@ func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 			Date:        action.Date,
 			Description: action.Description,
 			Amount:      action.Amount,
+			CategoryID:  action.CategoryID,
 			CreatedAt:   action.CreatedAt.Format(time.RFC3339),
 		})
 	}
@@ -192,7 +196,7 @@ func (h *ActionsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		actionType = models.ActionTypeIncome
 	}
 
-	action, err := h.db.CreateAction(session.UserID, actionType, req.Date, req.Description, req.Amount)
+	action, err := h.db.CreateAction(session.UserID, actionType, req.Date, req.Description, req.Amount, req.CategoryID)
 	if err != nil {
 		respondJSON(w, http.StatusInternalServerError, map[string]string{
 			"error": "Failed to create action",
@@ -211,6 +215,7 @@ func (h *ActionsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Date:        action.Date,
 		Description: action.Description,
 		Amount:      action.Amount,
+		CategoryID:  action.CategoryID,
 		CreatedAt:   action.CreatedAt.Format(time.RFC3339),
 	})
 }
@@ -316,7 +321,7 @@ func (h *ActionsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		actionType = models.ActionTypeIncome
 	}
 
-	action, err := h.db.UpdateAction(actionID, session.UserID, actionType, req.Date, req.Description, req.Amount)
+	action, err := h.db.UpdateAction(actionID, session.UserID, actionType, req.Date, req.Description, req.Amount, req.CategoryID)
 	if err != nil {
 		respondJSON(w, http.StatusNotFound, map[string]string{
 			"error": "Action not found or not owned by user",
@@ -335,6 +340,7 @@ func (h *ActionsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Date:        action.Date,
 		Description: action.Description,
 		Amount:      action.Amount,
+		CategoryID:  action.CategoryID,
 		CreatedAt:   action.CreatedAt.Format(time.RFC3339),
 	})
 }

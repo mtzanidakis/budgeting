@@ -15,6 +15,7 @@ const translations = {
         // Navigation
         'nav.budgeting': 'Budgeting',
         'nav.all_actions': 'All Actions',
+        'nav.categories': 'Categories',
         'nav.charts': 'Charts',
         'nav.profile': 'Profile',
         'nav.logout': 'Logout',
@@ -41,6 +42,7 @@ const translations = {
         'table.user': 'User',
         'table.type': 'Type',
         'table.description': 'Description',
+        'table.category': 'Category',
         'table.amount': 'Amount',
 
         // Dashboard
@@ -70,6 +72,24 @@ const translations = {
         'charts.title': 'Monthly Income & Expenses',
         'charts.income': 'Income',
         'charts.expenses': 'Expenses',
+
+        // Categories
+        'categories.title': 'Categories',
+        'categories.add': 'Add Category',
+        'categories.edit': 'Edit Category',
+        'categories.description': 'Description',
+        'categories.type': 'Type',
+        'categories.actions_column': 'Actions',
+        'categories.edit_button': 'Edit',
+        'categories.delete_button': 'Delete',
+        'categories.delete_confirm': 'Are you sure you want to delete this category? Actions using this category will no longer be associated with it.',
+        'categories.none': 'None',
+        'categories.category_optional': 'Category (Optional)',
+        'categories.failed_create': 'Failed to create category',
+        'categories.failed_update': 'Failed to update category',
+        'categories.failed_delete': 'Failed to delete category',
+        'categories.empty_title': 'No categories found',
+        'categories.empty_text': 'Click the + button to create your first category',
 
         // Profile
         'profile.title': 'User Profile',
@@ -125,6 +145,7 @@ const translations = {
         // Navigation
         'nav.budgeting': 'Προϋπολογισμός',
         'nav.all_actions': 'Όλες οι Κινήσεις',
+        'nav.categories': 'Κατηγορίες',
         'nav.charts': 'Γραφήματα',
         'nav.profile': 'Προφίλ',
         'nav.logout': 'Αποσύνδεση',
@@ -151,6 +172,7 @@ const translations = {
         'table.user': 'Χρήστης',
         'table.type': 'Τύπος',
         'table.description': 'Περιγραφή',
+        'table.category': 'Κατηγορία',
         'table.amount': 'Ποσό',
 
         // Dashboard
@@ -180,6 +202,24 @@ const translations = {
         'charts.title': 'Μηνιαία Έσοδα & Έξοδα',
         'charts.income': 'Έσοδα',
         'charts.expenses': 'Έξοδα',
+
+        // Categories
+        'categories.title': 'Κατηγορίες',
+        'categories.add': 'Προσθήκη Κατηγορίας',
+        'categories.edit': 'Επεξεργασία Κατηγορίας',
+        'categories.description': 'Περιγραφή',
+        'categories.type': 'Τύπος',
+        'categories.actions_column': 'Ενέργειες',
+        'categories.edit_button': 'Επεξεργασία',
+        'categories.delete_button': 'Διαγραφή',
+        'categories.delete_confirm': 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την κατηγορία; Οι κινήσεις που χρησιμοποιούν αυτή την κατηγορία δεν θα συσχετίζονται πλέον με αυτήν.',
+        'categories.none': 'Καμία',
+        'categories.category_optional': 'Κατηγορία (Προαιρετικό)',
+        'categories.failed_create': 'Αποτυχία δημιουργίας κατηγορίας',
+        'categories.failed_update': 'Αποτυχία ενημέρωσης κατηγορίας',
+        'categories.failed_delete': 'Αποτυχία διαγραφής κατηγορίας',
+        'categories.empty_title': 'Δεν βρέθηκαν κατηγορίες',
+        'categories.empty_text': 'Κάντε κλικ στο κουμπί + για να δημιουργήσετε την πρώτη σας κατηγορία',
 
         // Profile
         'profile.title': 'Προφίλ Χρήστη',

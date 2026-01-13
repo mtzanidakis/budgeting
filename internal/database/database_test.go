@@ -107,7 +107,7 @@ func TestActionsCRUD(t *testing.T) {
 	user, _ := db.CreateUser("testuser", password, "Test User")
 
 	// Create action
-	action, err := db.CreateAction(user.ID, models.ActionTypeExpense, "2024-01-01", "Test expense", 100.50)
+	action, err := db.CreateAction(user.ID, models.ActionTypeExpense, "2024-01-01", "Test expense", 100.50, nil)
 	if err != nil {
 		t.Fatalf("CreateAction failed: %v", err)
 	}
