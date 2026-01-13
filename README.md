@@ -9,6 +9,7 @@ A secure, fast, and simple Progressive Web App (PWA) for managing income and exp
 - **Session Management**: HTTP-only cookies with secure session storage
 - **Multi-user Support**: Track actions across multiple family members
 - **Action Management**: Create, edit, and delete income/expense entries with ownership controls
+- **Category Management**: Organize income and expenses with type-specific categories
 - **User Profiles**: Update name and change password through profile page
 - **Filtering**: Filter actions by user, type (income/expense), and date range
 - **Pagination**: Browse through all actions with 20 items per page
@@ -180,10 +181,19 @@ The production configuration keeps the port unexposed for security, while the de
   - Query params: `username`, `type`, `date_from`, `date_to`, `limit`, `offset`
   - Returns paginated response when `offset` is provided
 - `POST /api/actions` - Create new action
-  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00}`
+  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 0}`
 - `PUT /api/actions/{id}` - Update action (requires ownership)
-  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00}`
+  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 0}`
 - `DELETE /api/actions/{id}` - Delete action (requires ownership)
+
+### Categories
+- `GET /api/categories` - List all categories
+  - Query params: `action_type` (optional, filter by income/expense)
+- `POST /api/categories` - Create new category
+  - Body: `{"description": "...", "action_type": "income|expense"}`
+- `PUT /api/categories/{id}` - Update category
+  - Body: `{"description": "...", "action_type": "income|expense"}`
+- `DELETE /api/categories/{id}` - Delete category (sets actions' category_id to NULL)
 
 ### Charts
 - `GET /api/charts/monthly` - Get monthly income/expense summary
@@ -220,6 +230,17 @@ CREATE TABLE users (
 );
 ```
 
+### Categories Table
+```sql
+CREATE TABLE categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    action_type TEXT NOT NULL CHECK(action_type IN ('income', 'expense')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### Actions Table
 ```sql
 CREATE TABLE actions (
@@ -229,9 +250,11 @@ CREATE TABLE actions (
     date DATE NOT NULL,
     description TEXT NOT NULL,
     amount REAL NOT NULL,
+    category_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 ```
 
@@ -328,9 +351,9 @@ See `docs/PRD.md` section 9 for planned features:
 - ~~Monthly summaries & charts~~ ✅ Implemented
 - ~~User profile management~~ ✅ Implemented
 - ~~Multi-language support~~ ✅ Implemented
+- ~~Expense categories~~ ✅ Implemented
 - CSV/PDF exports
 - Role-based permissions
-- Expense categories
 - Recurring transactions
 - Budget limits & alerts
 - Email notifications

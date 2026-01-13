@@ -219,16 +219,27 @@ Created At
   created_at     DATETIME
   updated_at     DATETIME
 
+#### Categories
+
+  Field         Type
+  ------------- -------------------------
+  id            INTEGER PK
+  description   TEXT
+  action_type   ENUM(income, expense)
+  created_at    DATETIME
+  updated_at    DATETIME
+
 #### Actions
 
   Field         Type
-  ------------- -----------------------
+  ------------- ---------------------------
   id            INTEGER PK
   user_id       INTEGER FK(users.id)
   type          ENUM(income, expense)
   date          DATE
   description   TEXT
   amount        REAL
+  category_id   INTEGER FK(categories.id)
   created_at    DATETIME
   updated_at    DATETIME
 
@@ -282,10 +293,10 @@ Created At
 
 ## 9. Future Enhancements (Out of Scope)
 
--   Monthly summaries & charts
+-   ~~Monthly summaries & charts~~ ✅ Implemented
+-   ~~Categories for expenses~~ ✅ Implemented (income & expense categories)
 -   CSV / PDF exports
 -   Role-based permissions
--   Categories for expenses
 -   Recurring transactions
 -   Family budget limits & alerts
 
