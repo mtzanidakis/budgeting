@@ -1,9 +1,13 @@
 .PHONY: build run test clean cli docker-build docker-up docker-down
 
+# Version from git commit hash, fallback to "dev"
+VERSION ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
+LDFLAGS := -X github.com/manolis/budgeting/internal/version.Version=$(VERSION)
+
 # Build the server and CLI
 build:
-	CGO_ENABLED=1 go build -o bin/server ./cmd/server
-	CGO_ENABLED=1 go build -o bin/cli ./cmd/cli
+	CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -o bin/server ./cmd/server
+	CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -o bin/cli ./cmd/cli
 
 # Run the server locally
 run: build

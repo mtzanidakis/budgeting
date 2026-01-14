@@ -13,6 +13,7 @@ import (
 	"github.com/manolis/budgeting/internal/auth"
 	"github.com/manolis/budgeting/internal/config"
 	"github.com/manolis/budgeting/internal/database"
+	"github.com/manolis/budgeting/internal/version"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -20,6 +21,14 @@ func main() {
 	if len(os.Args) < 2 {
 		printUsage()
 		os.Exit(1)
+	}
+
+	command := os.Args[1]
+
+	// Handle version command separately (no DB required)
+	if command == "version" {
+		fmt.Printf("budgeting-cli version %s\n", version.Get())
+		os.Exit(0)
 	}
 
 	cfg, err := config.Load()
@@ -36,8 +45,6 @@ func main() {
 	if err := db.Migrate(); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
-
-	command := os.Args[1]
 
 	switch command {
 	case "user:add":
@@ -60,6 +67,7 @@ func main() {
 func printUsage() {
 	fmt.Println("Usage: cli <command> [options]")
 	fmt.Println("\nCommands:")
+	fmt.Println("  version")
 	fmt.Println("  user:add       -username <username> -name <name>")
 	fmt.Println("  user:edit      -username <username> [-name <name>]")
 	fmt.Println("  user:delete    -username <username>")

@@ -14,6 +14,7 @@ import (
 	"github.com/manolis/budgeting/internal/database"
 	"github.com/manolis/budgeting/internal/handlers"
 	"github.com/manolis/budgeting/internal/middleware"
+	"github.com/manolis/budgeting/internal/version"
 )
 
 //go:embed all:frontend
@@ -55,6 +56,11 @@ func main() {
 	usersHandler := handlers.NewUsersHandler(db)
 	categoriesHandler := handlers.NewCategoriesHandler(db)
 	configHandler := handlers.NewConfigHandler(cfg.Currency)
+	staticHandler, err := handlers.NewStaticHandler(staticFiles)
+	if err != nil {
+		logger.Error("Failed to initialize static handler", "error", err)
+		os.Exit(1)
+	}
 
 	// Set up router
 	r := chi.NewRouter()
@@ -85,21 +91,31 @@ func main() {
 		r.Delete("/api/categories/{id}", categoriesHandler.Delete)
 	})
 
-	// Serve static files (SPA fallback to index.html)
+	// Serve static files with versioning
 	staticFS, err := fs.Sub(staticFiles, "frontend")
 	if err != nil {
 		logger.Error("Failed to load static files", "error", err)
 		os.Exit(1)
 	}
 
+	// Service worker with version injection
+	r.Get("/sw.js", staticHandler.ServeServiceWorker)
+
+	// Static files with cache control middleware
 	fileServer := http.FileServer(http.FS(staticFS))
+	cachedFileServer := middleware.CacheControl(fileServer)
+
+	// SPA routes - serve index.html for root and app routes
+	r.Get("/", staticHandler.ServeIndexHTML)
+
+	// Catch-all for static assets
 	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		fileServer.ServeHTTP(w, r)
+		cachedFileServer.ServeHTTP(w, r)
 	})
 
 	// Start server
 	addr := ":" + cfg.Port
-	logger.Info("Starting server", "port", cfg.Port)
+	logger.Info("Starting server", "port", cfg.Port, "version", version.Get())
 
 	if err := http.ListenAndServe(addr, r); err != nil {
 		logger.Error("Server failed", "error", err)

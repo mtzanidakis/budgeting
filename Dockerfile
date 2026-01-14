@@ -1,6 +1,9 @@
 # Build stage
 FROM golang:1.25-alpine AS builder
 
+# Version argument for build-time injection
+ARG VERSION=docker
+
 WORKDIR /app
 
 # Install build dependencies
@@ -13,9 +16,13 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the server and CLI
-RUN CGO_ENABLED=1 GOOS=linux go build -o /app/server ./cmd/server
-RUN CGO_ENABLED=1 GOOS=linux go build -o /app/cli ./cmd/cli
+# Build the server and CLI with version
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags "-X github.com/manolis/budgeting/internal/version.Version=${VERSION}" \
+    -o /app/server ./cmd/server
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags "-X github.com/manolis/budgeting/internal/version.Version=${VERSION}" \
+    -o /app/cli ./cmd/cli
 
 # Runtime stage
 FROM alpine:latest
