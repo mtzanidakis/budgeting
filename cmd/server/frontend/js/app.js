@@ -1811,6 +1811,20 @@ loadConfig().then(() => checkSession());
 // Register service worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js').then((registration) => {
+            // Check for updates periodically
+            setInterval(() => {
+                registration.update();
+            }, 60000); // Check every minute
+        }).catch(() => {});
+    });
+
+    // Reload the page when a new service worker takes control
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
     });
 }
