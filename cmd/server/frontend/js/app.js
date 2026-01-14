@@ -29,8 +29,14 @@ const state = {
     },
     chartsPage: {
         year: new Date().getFullYear(),
+        month: new Date().getMonth() + 1,
         chartData: null,
-        chartInstance: null
+        chartInstance: null,
+        categoryChartData: null,
+        categoryChartInstances: {
+            expense: null,
+            income: null
+        }
     },
     profilePage: {
         message: null,
@@ -795,6 +801,7 @@ function ChartsPage() {
 function ChartsFilters() {
     const currentYear = new Date().getFullYear();
     const years = Array.from({length: 10}, (_, i) => currentYear - i);
+    const months = ta('months.full');
 
     return `
         <div class="card filters-card mb-6">
@@ -805,6 +812,14 @@ function ChartsFilters() {
                     <select onchange="updateChartYear(parseInt(this.value))" class="input">
                         ${years.map(y => `
                             <option value="${y}" ${state.chartsPage.year === y ? 'selected' : ''}>${y}</option>
+                        `).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>${t('filters.month')}</label>
+                    <select onchange="updateChartMonth(parseInt(this.value))" class="input">
+                        ${months.map((m, i) => `
+                            <option value="${i + 1}" ${state.chartsPage.month === i + 1 ? 'selected' : ''}>${m}</option>
                         `).join('')}
                     </select>
                 </div>
@@ -822,8 +837,38 @@ function ChartsDisplay() {
         `;
     }
 
+    const months = ta('months.full');
+    const monthName = months[state.chartsPage.month - 1];
+
     return `
+        <div class="card mb-6" style="padding: 2rem;">
+            <h3 style="margin-bottom: 1.5rem;">${monthName} ${state.chartsPage.year} - ${t('charts.categories_breakdown')}</h3>
+            ${!state.chartsPage.categoryChartData ? `
+                <p class="empty-state-text">${t('empty.loading_chart')}</p>
+            ` : `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                    <div>
+                        <h4 style="text-align: center; margin-bottom: 1rem; color: var(--danger);">${t('charts.expenses')}</h4>
+                        ${state.chartsPage.categoryChartData.expenses.length > 0 ? `
+                            <canvas id="expense-category-chart"></canvas>
+                        ` : `
+                            <p style="text-align: center; color: var(--text-secondary);">${t('empty.no_data')}</p>
+                        `}
+                    </div>
+                    <div>
+                        <h4 style="text-align: center; margin-bottom: 1rem; color: var(--success);">${t('charts.income')}</h4>
+                        ${state.chartsPage.categoryChartData.income.length > 0 ? `
+                            <canvas id="income-category-chart"></canvas>
+                        ` : `
+                            <p style="text-align: center; color: var(--text-secondary);">${t('empty.no_data')}</p>
+                        `}
+                    </div>
+                </div>
+            `}
+        </div>
+
         <div class="card" style="padding: 2rem;">
+            <h3 style="margin-bottom: 1rem;">${t('charts.yearly_overview')}</h3>
             <canvas id="monthly-chart"></canvas>
         </div>
     `;
@@ -902,7 +947,7 @@ function AddCategoryModal() {
                         <input type="text" id="category-description" class="input" required>
                     </div>
                     <div class="modal-actions">
-                        <button type="submit" class="btn btn-primary">${t('modal.submit')}</button>
+                        <button type="submit" class="btn btn-primary">${t('categories.submit')}</button>
                         <button type="button" onclick="closeCategoryModal()" class="btn btn-secondary">${t('modal.cancel')}</button>
                     </div>
                 </form>
@@ -1154,6 +1199,147 @@ function renderChart() {
                 }
             }
         });
+    }, 0);
+}
+
+function renderCategoryCharts() {
+    if (state.currentPage !== 'charts' || !state.chartsPage.categoryChartData) {
+        return;
+    }
+
+    // Destroy existing charts to prevent duplicates
+    if (state.chartsPage.categoryChartInstances.expense) {
+        state.chartsPage.categoryChartInstances.expense.destroy();
+        state.chartsPage.categoryChartInstances.expense = null;
+    }
+    if (state.chartsPage.categoryChartInstances.income) {
+        state.chartsPage.categoryChartInstances.income.destroy();
+        state.chartsPage.categoryChartInstances.income = null;
+    }
+
+    // Wait for DOM to be ready
+    setTimeout(() => {
+        const categoryData = state.chartsPage.categoryChartData;
+
+        // Color palettes
+        const expenseColors = [
+            '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+            '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+            '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef'
+        ];
+        const incomeColors = [
+            '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6',
+            '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+            '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'
+        ];
+
+        // Render expense chart
+        if (categoryData.expenses.length > 0) {
+            const expenseCanvas = document.getElementById('expense-category-chart');
+            if (expenseCanvas) {
+                const expenseCtx = expenseCanvas.getContext('2d');
+                const expenseLabels = categoryData.expenses.map(c => c.category_description);
+                const expenseAmounts = categoryData.expenses.map(c => c.total);
+                const expenseBackgrounds = expenseColors.slice(0, categoryData.expenses.length);
+
+                state.chartsPage.categoryChartInstances.expense = new Chart(expenseCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: expenseLabels,
+                        datasets: [{
+                            data: expenseAmounts,
+                            backgroundColor: expenseBackgrounds,
+                            borderWidth: 2,
+                            borderColor: getComputedStyle(document.documentElement)
+                                .getPropertyValue('--card-bg').trim()
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    color: getComputedStyle(document.documentElement)
+                                        .getPropertyValue('--text-primary').trim(),
+                                    padding: 10,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: ${state.currency}${value.toFixed(2)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Render income chart
+        if (categoryData.income.length > 0) {
+            const incomeCanvas = document.getElementById('income-category-chart');
+            if (incomeCanvas) {
+                const incomeCtx = incomeCanvas.getContext('2d');
+                const incomeLabels = categoryData.income.map(c => c.category_description);
+                const incomeAmounts = categoryData.income.map(c => c.total);
+                const incomeBackgrounds = incomeColors.slice(0, categoryData.income.length);
+
+                state.chartsPage.categoryChartInstances.income = new Chart(incomeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: incomeLabels,
+                        datasets: [{
+                            data: incomeAmounts,
+                            backgroundColor: incomeBackgrounds,
+                            borderWidth: 2,
+                            borderColor: getComputedStyle(document.documentElement)
+                                .getPropertyValue('--card-bg').trim()
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    color: getComputedStyle(document.documentElement)
+                                        .getPropertyValue('--text-primary').trim(),
+                                    padding: 10,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: ${state.currency}${value.toFixed(2)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
     }, 0);
 }
 
@@ -1612,6 +1798,7 @@ function navigateTo(page) {
         loadActions();
     } else if (page === 'charts') {
         loadChartData();
+        loadCategoryChartData();
     } else if (page === 'profile') {
         // No data loading needed - user info already in state
     } else if (page === 'categories') {
@@ -1718,9 +1905,27 @@ async function loadChartData() {
     }
 }
 
+async function loadCategoryChartData() {
+    const params = new URLSearchParams();
+    params.append('year', state.chartsPage.year);
+    params.append('month', state.chartsPage.month);
+
+    const data = await api(`/api/charts/categories?${params}`);
+    if (data) {
+        state.chartsPage.categoryChartData = data;
+        render();
+    }
+}
+
 function updateChartYear(year) {
     state.chartsPage.year = year;
     loadChartData();
+    loadCategoryChartData();
+}
+
+function updateChartMonth(month) {
+    state.chartsPage.month = month;
+    loadCategoryChartData();
 }
 
 async function updateProfile(profileData) {
@@ -1785,6 +1990,7 @@ function render() {
         } else if (state.currentPage === 'charts') {
             app.innerHTML = ChartsPage();
             renderChart();
+            renderCategoryCharts();
         } else if (state.currentPage === 'profile') {
             app.innerHTML = ProfilePage();
         } else if (state.currentPage === 'categories') {

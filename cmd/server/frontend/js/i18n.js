@@ -54,6 +54,7 @@ const translations = {
         'empty.no_actions_found': 'No actions found',
         'empty.adjust_filters': 'Try adjusting your filters',
         'empty.loading_chart': 'Loading chart data...',
+        'empty.no_data': 'No data available',
 
         // Add Action Modal
         'modal.add_action': 'Add Action',
@@ -70,8 +71,10 @@ const translations = {
 
         // Charts
         'charts.title': 'Monthly Income & Expenses',
-        'charts.income': 'Income',
+        'charts.income': 'Incomes',
         'charts.expenses': 'Expenses',
+        'charts.yearly_overview': 'Yearly Overview',
+        'charts.categories_breakdown': 'Categories Breakdown',
 
         // Categories
         'categories.title': 'Categories',
@@ -79,6 +82,7 @@ const translations = {
         'categories.edit': 'Edit Category',
         'categories.description': 'Description',
         'categories.type': 'Type',
+        'categories.submit': 'Add Category',
         'categories.actions_column': 'Actions',
         'categories.edit_button': 'Edit',
         'categories.delete_button': 'Delete',
@@ -184,6 +188,7 @@ const translations = {
         'empty.no_actions_found': 'Δεν βρέθηκαν κινήσεις',
         'empty.adjust_filters': 'Δοκιμάστε να προσαρμόσετε τα φίλτρα σας',
         'empty.loading_chart': 'Φόρτωση δεδομένων γραφήματος...',
+        'empty.no_data': 'Δεν υπάρχουν διαθέσιμα δεδομένα',
 
         // Add Action Modal
         'modal.add_action': 'Προσθήκη Κίνησης',
@@ -202,6 +207,8 @@ const translations = {
         'charts.title': 'Μηνιαία Έσοδα & Έξοδα',
         'charts.income': 'Έσοδα',
         'charts.expenses': 'Έξοδα',
+        'charts.yearly_overview': 'Ετήσια Επισκόπηση',
+        'charts.categories_breakdown': 'Ανάλυση Κατηγοριών',
 
         // Categories
         'categories.title': 'Κατηγορίες',
@@ -209,6 +216,7 @@ const translations = {
         'categories.edit': 'Επεξεργασία Κατηγορίας',
         'categories.description': 'Περιγραφή',
         'categories.type': 'Τύπος',
+        'categories.submit': 'Προσθήκη Κατηγορίας',
         'categories.actions_column': 'Ενέργειες',
         'categories.edit_button': 'Επεξεργασία',
         'categories.delete_button': 'Διαγραφή',

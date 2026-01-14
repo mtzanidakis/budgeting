@@ -84,6 +84,7 @@ func main() {
 		r.Put("/api/actions/{id}", actionsHandler.Update)
 		r.Delete("/api/actions/{id}", actionsHandler.Delete)
 		r.Get("/api/charts/monthly", actionsHandler.GetChartData)
+		r.Get("/api/charts/categories", actionsHandler.GetCategoryChartData)
 		r.Get("/api/users", usersHandler.List)
 		r.Get("/api/categories", categoriesHandler.List)
 		r.Post("/api/categories", categoriesHandler.Create)

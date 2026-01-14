@@ -65,6 +65,13 @@ type ChartDataResponse struct {
 	Data []MonthlyChartData `json:"data"`
 }
 
+type CategoryChartDataResponse struct {
+	Year     int                       `json:"year"`
+	Month    int                       `json:"month"`
+	Expenses []database.CategorySummary `json:"expenses"`
+	Income   []database.CategorySummary `json:"income"`
+}
+
 func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -265,6 +272,54 @@ func (h *ActionsHandler) GetChartData(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, ChartDataResponse{
 		Year: year,
 		Data: data,
+	})
+}
+
+func (h *ActionsHandler) GetCategoryChartData(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	year := time.Now().Year()
+	if yearStr := query.Get("year"); yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil {
+			year = y
+		}
+	}
+
+	month := int(time.Now().Month())
+	if monthStr := query.Get("month"); monthStr != "" {
+		if m, err := strconv.Atoi(monthStr); err == nil {
+			month = m
+		}
+	}
+
+	expenseSummaries, err := h.db.GetCategorySummary(year, month, "expense")
+	if err != nil {
+		respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Failed to fetch expense category data",
+		})
+		return
+	}
+
+	incomeSummaries, err := h.db.GetCategorySummary(year, month, "income")
+	if err != nil {
+		respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Failed to fetch income category data",
+		})
+		return
+	}
+
+	if expenseSummaries == nil {
+		expenseSummaries = []database.CategorySummary{}
+	}
+	if incomeSummaries == nil {
+		incomeSummaries = []database.CategorySummary{}
+	}
+
+	respondJSON(w, http.StatusOK, CategoryChartDataResponse{
+		Year:     year,
+		Month:    month,
+		Expenses: expenseSummaries,
+		Income:   incomeSummaries,
 	})
 }
 

@@ -25,6 +25,12 @@ type MonthlySummary struct {
 	Expense float64 `json:"expense"`
 }
 
+type CategorySummary struct {
+	CategoryID          *int64  `json:"category_id"`
+	CategoryDescription string  `json:"category_description"`
+	Total               float64 `json:"total"`
+}
+
 func (db *DB) CreateAction(userID int64, actionType models.ActionType, date, description string, amount float64, categoryID *int64) (*models.Action, error) {
 	now := time.Now()
 	result, err := db.Exec(
@@ -262,4 +268,37 @@ func (db *DB) DeleteAction(actionID, userID int64) error {
 	}
 
 	return nil
+}
+
+func (db *DB) GetCategorySummary(year, month int, actionType string) ([]CategorySummary, error) {
+	query := `
+		SELECT
+			a.category_id,
+			COALESCE(c.description, 'Uncategorized') as category_description,
+			SUM(a.amount) as total
+		FROM actions a
+		LEFT JOIN categories c ON a.category_id = c.id
+		WHERE CAST(strftime('%Y', a.date) AS INTEGER) = ?
+			AND CAST(strftime('%m', a.date) AS INTEGER) = ?
+			AND a.type = ?
+		GROUP BY a.category_id, c.description
+		ORDER BY total DESC
+	`
+
+	rows, err := db.Query(query, year, month, actionType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get category summary: %w", err)
+	}
+	defer rows.Close()
+
+	var summaries []CategorySummary
+	for rows.Next() {
+		var summary CategorySummary
+		if err := rows.Scan(&summary.CategoryID, &summary.CategoryDescription, &summary.Total); err != nil {
+			return nil, fmt.Errorf("failed to scan category summary: %w", err)
+		}
+		summaries = append(summaries, summary)
+	}
+
+	return summaries, nil
 }
