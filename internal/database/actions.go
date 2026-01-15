@@ -171,7 +171,7 @@ func (db *DB) CountActions(filters ActionFilters) (int, error) {
 	return count, nil
 }
 
-func (db *DB) GetMonthlySummary(year int) ([]MonthlySummary, error) {
+func (db *DB) GetMonthlySummary(year int, username string) ([]MonthlySummary, error) {
 	query := `
 		SELECT
 			CAST(strftime('%Y', date) AS INTEGER) as year,
@@ -179,12 +179,22 @@ func (db *DB) GetMonthlySummary(year int) ([]MonthlySummary, error) {
 			SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
 			SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
 		FROM actions
-		WHERE CAST(strftime('%Y', date) AS INTEGER) = ?
+		WHERE CAST(strftime('%Y', date) AS INTEGER) = ?`
+
+	args := []interface{}{year}
+
+	if username != "" {
+		query += `
+			AND user_id = (SELECT id FROM users WHERE username = ?)`
+		args = append(args, username)
+	}
+
+	query += `
 		GROUP BY year, month
 		ORDER BY month ASC
 	`
 
-	rows, err := db.Query(query, year)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get monthly summary: %w", err)
 	}
@@ -270,7 +280,7 @@ func (db *DB) DeleteAction(actionID, userID int64) error {
 	return nil
 }
 
-func (db *DB) GetCategorySummary(year, month int, actionType string) ([]CategorySummary, error) {
+func (db *DB) GetCategorySummary(year, month int, actionType string, username string) ([]CategorySummary, error) {
 	query := `
 		SELECT
 			a.category_id,
@@ -280,12 +290,22 @@ func (db *DB) GetCategorySummary(year, month int, actionType string) ([]Category
 		LEFT JOIN categories c ON a.category_id = c.id
 		WHERE CAST(strftime('%Y', a.date) AS INTEGER) = ?
 			AND CAST(strftime('%m', a.date) AS INTEGER) = ?
-			AND a.type = ?
+			AND a.type = ?`
+
+	args := []interface{}{year, month, actionType}
+
+	if username != "" {
+		query += `
+			AND a.user_id = (SELECT id FROM users WHERE username = ?)`
+		args = append(args, username)
+	}
+
+	query += `
 		GROUP BY a.category_id, c.description
 		ORDER BY total DESC
 	`
 
-	rows, err := db.Query(query, year, month, actionType)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category summary: %w", err)
 	}

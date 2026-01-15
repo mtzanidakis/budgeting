@@ -230,6 +230,7 @@ func (h *ActionsHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *ActionsHandler) GetChartData(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	yearStr := query.Get("year")
+	username := query.Get("username")
 
 	year := time.Now().Year()
 	if yearStr != "" {
@@ -238,7 +239,7 @@ func (h *ActionsHandler) GetChartData(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	summaries, err := h.db.GetMonthlySummary(year)
+	summaries, err := h.db.GetMonthlySummary(year, username)
 	if err != nil {
 		respondJSON(w, http.StatusInternalServerError, map[string]string{
 			"error": "Failed to fetch chart data",
@@ -292,7 +293,9 @@ func (h *ActionsHandler) GetCategoryChartData(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	expenseSummaries, err := h.db.GetCategorySummary(year, month, "expense")
+	username := query.Get("username")
+
+	expenseSummaries, err := h.db.GetCategorySummary(year, month, "expense", username)
 	if err != nil {
 		respondJSON(w, http.StatusInternalServerError, map[string]string{
 			"error": "Failed to fetch expense category data",
@@ -300,7 +303,7 @@ func (h *ActionsHandler) GetCategoryChartData(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	incomeSummaries, err := h.db.GetCategorySummary(year, month, "income")
+	incomeSummaries, err := h.db.GetCategorySummary(year, month, "income", username)
 	if err != nil {
 		respondJSON(w, http.StatusInternalServerError, map[string]string{
 			"error": "Failed to fetch income category data",

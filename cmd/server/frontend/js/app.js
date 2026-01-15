@@ -30,6 +30,7 @@ const state = {
     chartsPage: {
         year: new Date().getFullYear(),
         month: new Date().getMonth() + 1,
+        username: '',
         chartData: null,
         chartInstance: null,
         categoryChartData: null,
@@ -820,6 +821,15 @@ function ChartsFilters() {
                     <select onchange="updateChartMonth(parseInt(this.value))" class="input">
                         ${months.map((m, i) => `
                             <option value="${i + 1}" ${state.chartsPage.month === i + 1 ? 'selected' : ''}>${m}</option>
+                        `).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>${t('filters.user')}</label>
+                    <select onchange="updateChartUsername(this.value)" class="input">
+                        <option value="">${t('filters.all_users')}</option>
+                        ${state.users.map(u => `
+                            <option value="${u.username}" ${state.chartsPage.username === u.username ? 'selected' : ''}>${u.name}</option>
                         `).join('')}
                     </select>
                 </div>
@@ -1897,6 +1907,9 @@ async function loadAllActions() {
 async function loadChartData() {
     const params = new URLSearchParams();
     params.append('year', state.chartsPage.year);
+    if (state.chartsPage.username) {
+        params.append('username', state.chartsPage.username);
+    }
 
     const data = await api(`/api/charts/monthly?${params}`);
     if (data) {
@@ -1909,6 +1922,9 @@ async function loadCategoryChartData() {
     const params = new URLSearchParams();
     params.append('year', state.chartsPage.year);
     params.append('month', state.chartsPage.month);
+    if (state.chartsPage.username) {
+        params.append('username', state.chartsPage.username);
+    }
 
     const data = await api(`/api/charts/categories?${params}`);
     if (data) {
@@ -1925,6 +1941,12 @@ function updateChartYear(year) {
 
 function updateChartMonth(month) {
     state.chartsPage.month = month;
+    loadCategoryChartData();
+}
+
+function updateChartUsername(username) {
+    state.chartsPage.username = username;
+    loadChartData();
     loadCategoryChartData();
 }
 
