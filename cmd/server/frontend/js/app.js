@@ -269,6 +269,7 @@ async function login(username, password) {
         state.user = data.user;
         await loadActions();
         await loadUsers();
+        await loadCategories();
         render();
     } else {
         const errorMsg = data?.message || t('login.error');
