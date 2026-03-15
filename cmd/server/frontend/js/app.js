@@ -1432,7 +1432,7 @@ function AddActionModal() {
                     </div>
                     <div class="form-group">
                         <label>${t('categories.category')}</label>
-                        <select id="action-category" class="input" required>
+                        <select id="action-category" class="input" required oninvalid="this.setCustomValidity(t('categories.category_required'))" oninput="this.setCustomValidity('')">
                             <option value="">—</option>
                             ${expenseCategories.map(c => `<option value="${c.id}">${c.description}</option>`).join('')}
                         </select>
@@ -1483,7 +1483,7 @@ function EditActionModal() {
                     </div>
                     <div class="form-group">
                         <label>${t('categories.category')}</label>
-                        <select id="edit-action-category" class="input" required>
+                        <select id="edit-action-category" class="input" required oninvalid="this.setCustomValidity(t('categories.category_required'))" oninput="this.setCustomValidity('')">
                             <option value="">—</option>
                             ${actionCategories.map(c => `<option value="${c.id}" ${action.category_id === c.id ? 'selected' : ''}>${c.description}</option>`).join('')}
                         </select>
