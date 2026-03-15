@@ -579,6 +579,8 @@ function AllActionsPage() {
                     ${Pagination()}
                 </div>
             </main>
+
+            <button class="floating-button" onclick="openAddActionModal()">+</button>
             <div id="modal-container"></div>
         </div>
     `;
