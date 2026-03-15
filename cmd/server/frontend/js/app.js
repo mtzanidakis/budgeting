@@ -1429,9 +1429,9 @@ function AddActionModal() {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>${t('categories.category_optional')}</label>
-                        <select id="action-category" class="input">
-                            <option value="">${t('categories.none')}</option>
+                        <label>${t('categories.category')}</label>
+                        <select id="action-category" class="input" required>
+                            <option value="">—</option>
                             ${expenseCategories.map(c => `<option value="${c.id}">${c.description}</option>`).join('')}
                         </select>
                     </div>
@@ -1480,9 +1480,9 @@ function EditActionModal() {
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>${t('categories.category_optional')}</label>
-                        <select id="edit-action-category" class="input">
-                            <option value="">${t('categories.none')}</option>
+                        <label>${t('categories.category')}</label>
+                        <select id="edit-action-category" class="input" required>
+                            <option value="">—</option>
                             ${actionCategories.map(c => `<option value="${c.id}" ${action.category_id === c.id ? 'selected' : ''}>${c.description}</option>`).join('')}
                         </select>
                     </div>
@@ -1522,7 +1522,7 @@ function updateActionTypeCategories() {
     const categorySelect = document.getElementById('action-category');
     const categories = state.categories.filter(c => c.action_type === actionType);
 
-    categorySelect.innerHTML = `<option value="">${t('categories.none')}</option>` +
+    categorySelect.innerHTML = `<option value="">—</option>` +
         categories.map(c => `<option value="${c.id}">${c.description}</option>`).join('');
 }
 
@@ -1531,19 +1531,23 @@ function updateEditActionTypeCategories() {
     const categorySelect = document.getElementById('edit-action-category');
     const categories = state.categories.filter(c => c.action_type === actionType);
 
-    categorySelect.innerHTML = `<option value="">${t('categories.none')}</option>` +
+    categorySelect.innerHTML = `<option value="">—</option>` +
         categories.map(c => `<option value="${c.id}">${c.description}</option>`).join('');
 }
 
 async function handleAddAction(event) {
     event.preventDefault();
     const categoryValue = document.getElementById('action-category').value;
+    if (!categoryValue) {
+        alert(t('categories.category_required'));
+        return;
+    }
     const actionData = {
         type: document.getElementById('action-type').value,
         date: formatDateToISO(document.getElementById('action-date').value),
         description: document.getElementById('action-description').value,
         amount: parseFloat(document.getElementById('action-amount').value),
-        category_id: categoryValue ? parseInt(categoryValue) : null
+        category_id: parseInt(categoryValue)
     };
 
     if (await createAction(actionData)) {
@@ -1589,12 +1593,16 @@ async function handleEditAction(event) {
     event.preventDefault();
 
     const categoryValue = document.getElementById('edit-action-category').value;
+    if (!categoryValue) {
+        alert(t('categories.category_required'));
+        return;
+    }
     const actionData = {
         type: document.getElementById('edit-action-type').value,
         date: formatDateToISO(document.getElementById('edit-action-date').value),
         description: document.getElementById('edit-action-description').value,
         amount: parseFloat(document.getElementById('edit-action-amount').value),
-        category_id: categoryValue ? parseInt(categoryValue) : null
+        category_id: parseInt(categoryValue)
     };
 
     if (await updateAction(state.editActionModal.action.id, actionData)) {

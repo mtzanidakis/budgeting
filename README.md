@@ -34,7 +34,7 @@ A secure, fast, and simple Progressive Web App (PWA) for managing income and exp
 ## Tech Stack
 
 ### Backend
-- **Go 1.25+** with Chi router
+- **Go 1.26+** with Chi router
 - **SQLite3** database with foreign key constraints
 - **bcrypt** for password hashing
 - **slog** for structured JSON logging
@@ -50,7 +50,7 @@ A secure, fast, and simple Progressive Web App (PWA) for managing income and exp
 ## Quick Start
 
 ### Prerequisites
-- Go 1.25 or later
+- Go 1.26 or later
 - Make (optional, for convenience)
 - Docker & Docker Compose (for containerized deployment)
 
@@ -181,9 +181,9 @@ The production configuration keeps the port unexposed for security, while the de
   - Query params: `username`, `type`, `date_from`, `date_to`, `limit`, `offset`
   - Returns paginated response when `offset` is provided
 - `POST /api/actions` - Create new action
-  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 0}`
+  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 1}` (category_id is required)
 - `PUT /api/actions/{id}` - Update action (requires ownership)
-  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 0}`
+  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 1}` (category_id is required)
 - `DELETE /api/actions/{id}` - Delete action (requires ownership)
 
 ### Categories
@@ -193,7 +193,7 @@ The production configuration keeps the port unexposed for security, while the de
   - Body: `{"description": "...", "action_type": "income|expense"}`
 - `PUT /api/categories/{id}` - Update category
   - Body: `{"description": "...", "action_type": "income|expense"}`
-- `DELETE /api/categories/{id}` - Delete category (sets actions' category_id to NULL)
+- `DELETE /api/categories/{id}` - Delete category (sets related actions' category_id to NULL)
 
 ### Charts
 - `GET /api/charts/monthly` - Get monthly income/expense summary
@@ -292,8 +292,6 @@ go test -v ./...
 │   ├── handlers/        # HTTP request handlers
 │   ├── middleware/      # HTTP middleware (auth, logging)
 │   └── models/          # Data models
-├── docs/
-│   └── PRD.md          # Product requirements document
 ├── Dockerfile
 ├── docker-compose.yml
 ├── Makefile
@@ -347,11 +345,6 @@ make actions-query -username john
 
 ## Future Enhancements
 
-See `docs/PRD.md` section 9 for planned features:
-- ~~Monthly summaries & charts~~ ✅ Implemented
-- ~~User profile management~~ ✅ Implemented
-- ~~Multi-language support~~ ✅ Implemented
-- ~~Expense categories~~ ✅ Implemented
 - CSV/PDF exports
 - Role-based permissions
 - Recurring transactions

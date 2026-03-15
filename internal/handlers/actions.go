@@ -193,6 +193,13 @@ func (h *ActionsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.CategoryID == nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Category is required",
+		})
+		return
+	}
+
 	// Default to today if date is empty
 	if req.Date == "" {
 		req.Date = time.Now().Format("2006-01-02")
@@ -370,6 +377,13 @@ func (h *ActionsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.Amount <= 0 {
 		respondJSON(w, http.StatusBadRequest, map[string]string{
 			"error": "Amount must be positive",
+		})
+		return
+	}
+
+	if req.CategoryID == nil {
+		respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Category is required",
 		})
 		return
 	}
