@@ -68,15 +68,43 @@ Open http://localhost:4666 and log in.
 
 ### Docker
 
+The base `docker-compose.yml` defines the service without a port mapping.
+Pick an override to make it reachable: `docker-compose.override.yml-dev`
+(builds from source, exposes port 4666 on localhost) or
+`docker-compose.override.yml-prod` (uses the published image and adds a
+[tsrp](https://github.com/mtzanidakis/tsrp) Tailscale reverse-proxy sidecar
+instead of a public port). Activate one by symlinking it to
+`docker-compose.override.yml`, which `docker compose` picks up automatically.
+
+#### Development
+
 ```bash
+ln -sf docker-compose.override.yml-dev docker-compose.override.yml
 echo "SESSION_SECRET=$(openssl rand -base64 32)" > .env
 docker compose up -d
 docker compose exec budgeting-app /app/admin user:add -username alice -name Alice
 docker compose logs -f
 ```
 
-The production `docker-compose.yml` keeps the port unexposed; use
-`docker-compose.dev.yml` if you want `localhost:4666` reachable directly.
+App at http://localhost:4666.
+
+#### Production with Tailscale
+
+Reachable only over your tailnet; no public port. Requires a Tailscale
+auth key ([login.tailscale.com/admin/settings/keys](https://login.tailscale.com/admin/settings/keys)).
+
+```bash
+ln -sf docker-compose.override.yml-prod docker-compose.override.yml
+cat > .env <<EOF
+SESSION_SECRET=$(openssl rand -base64 32)
+HOSTNAME=budgeting             # Tailscale machine name
+TS_AUTHKEY=tskey-auth-...      # Tailscale auth key
+EOF
+docker compose up -d
+```
+
+App at `https://budgeting.<your-tailnet>.ts.net`. The tsrp sidecar stores
+its Tailscale state under `./config/tsrp/`.
 
 ## Configuration
 
@@ -269,7 +297,8 @@ skill/SKILL.md       Claude Code skill bundled with CLI releases
 .goreleaser.yaml     CLI binary release config
 Dockerfile
 docker-compose.yml
-docker-compose.dev.yml
+docker-compose.override.yml-dev   # symlink to docker-compose.override.yml for local dev
+docker-compose.override.yml-prod  # symlink to docker-compose.override.yml for tsrp deploy
 Makefile
 ```
 
