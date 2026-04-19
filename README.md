@@ -296,3 +296,7 @@ Database migrations run idempotently on startup; no separate migration step.
 - Category deletes do not cascade to actions (the `category_id` is cleared
   instead — data is never lost when reorganising).
 - Token revocation is immediate and the audit record is preserved.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
