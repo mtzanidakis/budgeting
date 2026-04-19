@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"text/tabwriter"
+	"time"
 
 	"github.com/manolis/budgeting/internal/auth"
 	"github.com/manolis/budgeting/internal/config"
@@ -57,6 +59,12 @@ func main() {
 		handleUserList(db)
 	case "actions:query":
 		handleActionsQuery(db)
+	case "token:list":
+		handleTokenList(db)
+	case "token:add":
+		handleTokenAdd(db)
+	case "token:delete":
+		handleTokenDelete(db)
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		printUsage()
@@ -73,6 +81,9 @@ func printUsage() {
 	fmt.Println("  user:delete    -username <username>")
 	fmt.Println("  user:list")
 	fmt.Println("  actions:query  -username <username> [-type income|expense] [-date-range YYYYMMDD-YYYYMMDD]")
+	fmt.Println("  token:list     -username <username>")
+	fmt.Println("  token:add      -username <username> -name <label> [-expires YYYY-MM-DD]")
+	fmt.Println("  token:delete   -id <token-id>")
 }
 
 func handleUserAdd(db *database.DB) {
@@ -279,4 +290,117 @@ func readPassword(prompt string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(bytePassword))
+}
+
+func handleTokenList(db *database.DB) {
+	fs := flag.NewFlagSet("token:list", flag.ExitOnError)
+	username := fs.String("username", "", "Username (required)")
+	fs.Parse(os.Args[2:])
+
+	if *username == "" {
+		fmt.Println("Error: -username is required")
+		fs.PrintDefaults()
+		os.Exit(1)
+	}
+
+	user, err := db.GetUserByUsername(*username)
+	if err != nil {
+		log.Fatalf("Failed to get user: %v", err)
+	}
+
+	tokens, err := db.ListAPITokensByUser(user.ID)
+	if err != nil {
+		log.Fatalf("Failed to list tokens: %v", err)
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "ID\tNAME\tCREATED\tLAST USED\tEXPIRES")
+	fmt.Fprintln(w, "---\t----\t-------\t---------\t-------")
+	for _, t := range tokens {
+		lastUsed := "never"
+		if t.LastUsedAt != nil {
+			lastUsed = t.LastUsedAt.Format("2006-01-02 15:04:05")
+		}
+		expires := "never"
+		if t.ExpiresAt != nil {
+			expires = t.ExpiresAt.Format("2006-01-02")
+		}
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\n", t.ID, t.Name, t.CreatedAt.Format("2006-01-02 15:04:05"), lastUsed, expires)
+	}
+	w.Flush()
+}
+
+func handleTokenAdd(db *database.DB) {
+	fs := flag.NewFlagSet("token:add", flag.ExitOnError)
+	username := fs.String("username", "", "Username (required)")
+	name := fs.String("name", "", "Token label (required)")
+	expires := fs.String("expires", "", "Expiry date (YYYY-MM-DD, optional)")
+	fs.Parse(os.Args[2:])
+
+	if *username == "" || *name == "" {
+		fmt.Println("Error: -username and -name are required")
+		fs.PrintDefaults()
+		os.Exit(1)
+	}
+
+	user, err := db.GetUserByUsername(*username)
+	if err != nil {
+		log.Fatalf("Failed to get user: %v", err)
+	}
+
+	var expiresAt *time.Time
+	if *expires != "" {
+		t, err := time.Parse("2006-01-02", *expires)
+		if err != nil {
+			log.Fatalf("Invalid -expires, use YYYY-MM-DD: %v", err)
+		}
+		t = t.Add(24*time.Hour - time.Second)
+		if !t.After(time.Now()) {
+			log.Fatal("Expiry must be in the future")
+		}
+		expiresAt = &t
+	}
+
+	raw, hash, err := auth.GenerateAPIToken()
+	if err != nil {
+		log.Fatalf("Failed to generate token: %v", err)
+	}
+
+	tok, err := db.CreateAPIToken(user.ID, *name, hash, expiresAt)
+	if err != nil {
+		log.Fatalf("Failed to create token: %v", err)
+	}
+
+	fmt.Printf("Token created: ID=%d, Name=%s\n", tok.ID, tok.Name)
+	fmt.Printf("Token: %s\n", raw)
+	fmt.Println("Save this token securely. It will not be shown again.")
+}
+
+func handleTokenDelete(db *database.DB) {
+	fs := flag.NewFlagSet("token:delete", flag.ExitOnError)
+	idStr := fs.String("id", "", "Token ID (required)")
+	fs.Parse(os.Args[2:])
+
+	if *idStr == "" {
+		fmt.Println("Error: -id is required")
+		fs.PrintDefaults()
+		os.Exit(1)
+	}
+
+	id, err := strconv.ParseInt(*idStr, 10, 64)
+	if err != nil || id <= 0 {
+		log.Fatal("Invalid -id")
+	}
+
+	// Look up the token to find its user_id (admin can delete any user's token).
+	var userID int64
+	row := db.QueryRow("SELECT user_id FROM api_tokens WHERE id = ? AND deleted_at IS NULL", id)
+	if err := row.Scan(&userID); err != nil {
+		log.Fatalf("Token not found: %v", err)
+	}
+
+	if err := db.SoftDeleteAPIToken(id, userID); err != nil {
+		log.Fatalf("Failed to delete token: %v", err)
+	}
+	fmt.Println("Token deleted successfully")
 }
