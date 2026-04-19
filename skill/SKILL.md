@@ -110,8 +110,23 @@ Returns expense and income summaries grouped by category.
   timestamps with timezone; trim before re-sending if needed.
 - **Amounts** are decimals with `.` separator. Never negative — sign is
   implied by `type`.
-- **Before creating an action, resolve the category**: run `categories list
-  --type <type>` and match by description. Ask the user if ambiguous.
+- **Resolve categories semantically, not literally**: whenever the user
+  names a category — for filtering (`--category`), creating, or updating
+  actions — run `categories list --type <type>` first and match by
+  *meaning*, not exact string. The user's word is often a generic label
+  for a more specific category description. Examples:
+  - "φαγητό" / "food" → "Εστιατόρια, Καφέ / Delivery", or
+    "Σούπερ μάρκετ", or both, depending on context (eating out vs. groceries)
+  - "μεταφορές" / "transport" → "Βενζίνη", "ΜΜΜ", "Ταξί", "Παρκινγκ"
+  - "σπίτι" → "Ενοίκιο", "ΔΕΗ", "ΕΥΔΑΠ", "Internet", κλπ
+  Behavior:
+  1. If **exactly one** category plausibly matches, use it and proceed.
+  2. If **multiple** match, either combine them (make one call per category
+     id and merge results) or ask the user which one(s) they meant — pick
+     based on how ambiguous the request is.
+  3. If **none** match, tell the user what categories exist and ask.
+  4. Never invent a category id. Never create a new category silently just
+     to fulfill a request — ask first.
 - **Before deleting anything**, confirm with the user unless the request was
   unambiguous. Deletes are immediate (actions) or propagating (categories).
 - **Authentication errors** (HTTP 401) mean the token is invalid, expired,
