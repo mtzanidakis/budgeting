@@ -48,6 +48,25 @@ budgeting-cli actions list [--from YYYY-MM-DD] [--to YYYY-MM-DD]
 Without `--offset`, returns a plain JSON array. With `--offset`, returns
 `{"actions": [...], "total": N}` for pagination.
 
+`--from` and `--to` are **inclusive**. You are expected to resolve relative
+date expressions (in any language) to concrete `YYYY-MM-DD` bounds yourself
+before calling the CLI. Use the user's local calendar; if unsure about the
+year, default to the current year, or ask.
+
+Natural-language → CLI examples:
+
+| User request | Resolved range | Command |
+|---|---|---|
+| "δώσε μου τα έξοδα από 13/4 μέχρι 16/4" | 2026-04-13 → 2026-04-16 | `budgeting-cli actions list --type expense --from 2026-04-13 --to 2026-04-16` |
+| "δώσε μου τα έσοδα της πρώτης εβδομάδας του Μαρτίου" | 2026-03-01 → 2026-03-07 | `budgeting-cli actions list --type income --from 2026-03-01 --to 2026-03-07` |
+| "show me last month's expenses" (today = 2026-04-19) | 2026-03-01 → 2026-03-31 | `budgeting-cli actions list --type expense --from 2026-03-01 --to 2026-03-31` |
+| "έξοδα φαγητού τον Απρίλιο" | look up category id for "Φαγητό" first, then: | `budgeting-cli actions list --type expense --category <id> --from 2026-04-01 --to 2026-04-30` |
+| "τι έκανα σήμερα" | today only | `budgeting-cli actions list --from 2026-04-19 --to 2026-04-19` |
+
+"Πρώτη εβδομάδα" conventionally means days 1–7. "Εβδομάδα" without a
+specifier means the calendar week containing the date (Mon–Sun). Ask if
+ambiguous.
+
 ### actions create — log a new entry
 ```
 budgeting-cli actions create --type expense --date 2026-04-19 \
