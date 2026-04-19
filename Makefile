@@ -4,10 +4,11 @@
 VERSION ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
 LDFLAGS := -X github.com/manolis/budgeting/internal/version.Version=$(VERSION)
 
-# Build the server and admin CLI
+# Build the server, admin CLI and budgeting-cli
 build:
 	CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -o bin/server ./cmd/server
 	CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -o bin/admin ./cmd/admin
+	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/budgeting-cli ./cmd/budgeting-cli
 
 # Run the server locally
 run: build
