@@ -64,7 +64,7 @@ make admin ARGS="user:add -username alice -name Alice"   # create first user
 ./bin/server
 ```
 
-Open http://localhost:8080 and log in.
+Open http://localhost:4666 and log in.
 
 ### Docker
 
@@ -76,14 +76,14 @@ docker compose logs -f
 ```
 
 The production `docker-compose.yml` keeps the port unexposed; use
-`docker-compose.dev.yml` if you want `localhost:8080` reachable directly.
+`docker-compose.dev.yml` if you want `localhost:4666` reachable directly.
 
 ## Configuration
 
 | Variable          | Required | Default                  | Description                             |
 | ----------------- | -------- | ------------------------ | --------------------------------------- |
 | `SESSION_SECRET`  | **yes**  | —                        | Secret for session cookie encryption    |
-| `PORT`            | no       | `8080`                   | HTTP port                               |
+| `PORT`            | no       | `4666`                   | HTTP port                               |
 | `DATABASE_PATH`   | no       | `./data/budgeting.db`    | SQLite file path                        |
 | `LOG_LEVEL`       | no       | `info`                   | `debug` / `info` / `warn` / `error`     |
 | `CURRENCY`        | no       | `€`                      | Currency symbol displayed in the UI     |
@@ -222,7 +222,7 @@ CGO_ENABLED=0 go build -o bin/budgeting-cli ./cmd/budgeting-cli
 ### Configure
 
 ```bash
-export BUDGETING_URL="http://localhost:8080"
+export BUDGETING_URL="http://localhost:4666"
 export BUDGETING_TOKEN="bdg_..."   # from User menu → API Tokens
 ```
 

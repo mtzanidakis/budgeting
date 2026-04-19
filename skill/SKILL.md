@@ -12,7 +12,7 @@ Client for a self-hosted family budgeting service. All operations go through
 
 Set two environment variables once per shell (or per command):
 
-- `BUDGETING_URL` — base URL of the server, e.g. `http://localhost:8080`
+- `BUDGETING_URL` — base URL of the server, e.g. `http://localhost:4666`
 - `BUDGETING_TOKEN` — API token generated from the web UI under
   **User menu → API Tokens → Generate new token**. Tokens start with `bdg_`.
 

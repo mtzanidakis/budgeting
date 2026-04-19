@@ -55,7 +55,7 @@ skill/SKILL.md       Claude Code skill bundled with budgeting-cli release archiv
 ## Environment Variables
 
 - `SESSION_SECRET` — **required**
-- `PORT` — default `8080`
+- `PORT` — default `4666`
 - `DATABASE_PATH` — default `./data/budgeting.db`
 - `LOG_LEVEL` — default `info`
 - `CURRENCY` — default `€`

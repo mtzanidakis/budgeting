@@ -50,7 +50,7 @@ func printUsage() {
 	fmt.Println(`Usage: budgeting-cli <command> [subcommand] [flags]
 
 Global environment variables:
-  BUDGETING_URL     Base URL of the budgeting server (e.g. http://localhost:8080)
+  BUDGETING_URL     Base URL of the budgeting server (e.g. http://localhost:4666)
   BUDGETING_TOKEN   API token generated from the web UI (bdg_...)
 
 Per-command flags (accepted by all subcommands):
