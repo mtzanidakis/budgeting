@@ -27,7 +27,9 @@ A secure, fast, and simple Progressive Web App (PWA) for managing income and exp
 - **Inline Actions**: Click on your own actions to edit or delete them directly
 
 ### Administration
-- **Admin CLI**: Manage users via command-line interface
+- **Admin CLI**: Manage users and API tokens via command-line interface
+- **API Tokens**: Per-user tokens for programmatic access, managed from the web UI
+- **Agent-friendly CLI**: Standalone `budgeting-cli` client with a Claude Code skill bundled in releases
 - **Structured Logging**: JSON-formatted logs with request tracking
 - **Docker Support**: Production and development Docker Compose configurations
 
@@ -203,8 +205,28 @@ The production configuration keeps the port unexposed for security, while the de
 - `GET /api/users` - List all users (for filter dropdown)
 - `PUT /api/profile` - Update user profile (name and/or password)
 
+### API Tokens
+Session-only endpoints (cannot be called with a Bearer token — only from the logged-in UI).
+- `GET /api/tokens` - List the caller's active tokens
+- `POST /api/tokens` - Create a new token; response contains the raw token exactly once
+  - Body: `{"name": "...", "expires_at": "YYYY-MM-DD" | null}`
+- `DELETE /api/tokens/{id}` - Revoke a token (soft-delete)
+
 ### Configuration
 - `GET /api/config` - Get app configuration (e.g., currency symbol)
+
+## API Authentication
+
+All `/api/*` endpoints (except `/api/login` and `/api/config`) require authentication.
+Two methods are accepted:
+
+- **Session cookie** — set automatically by the web UI after `/api/login`.
+- **Bearer token** — pass the raw token in an `Authorization: Bearer bdg_...` header.
+
+Tokens are generated per user from the web UI under **User menu → API Tokens**. They
+have full access to the owning user's data but cannot manage other tokens. Deletion
+is a soft-delete; the record is retained for audit but the token stops working
+immediately.
 
 ## Environment Variables
 
@@ -283,20 +305,73 @@ go test -v ./...
 │   │       ├── index.html
 │   │       ├── manifest.json
 │   │       └── sw.js
-│   └── admin/           # Admin CLI tool
-│       └── main.go
+│   ├── admin/           # Admin CLI tool (user + token management, direct DB access)
+│   │   └── main.go
+│   └── budgeting-cli/   # HTTP client for the API, intended for scripts and AI agents
+│       ├── main.go
+│       └── commands.go
 ├── internal/
-│   ├── auth/            # Authentication & password hashing
+│   ├── apiclient/       # HTTP client used by budgeting-cli
+│   ├── auth/            # Authentication, password hashing, API token helpers
 │   ├── config/          # Configuration management
 │   ├── database/        # Database operations
 │   ├── handlers/        # HTTP request handlers
 │   ├── middleware/      # HTTP middleware (auth, logging)
 │   └── models/          # Data models
+├── skill/
+│   └── SKILL.md         # Claude Code skill bundled with CLI releases
+├── .goreleaser.yaml     # CLI binary release config (linux/darwin, amd64/arm64)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── Makefile
 └── README.md
 ```
+
+## Programmatic / AI Agent Access
+
+The `budgeting-cli` binary is a standalone HTTP client for the budgeting API,
+designed for scripts and AI agents. Pre-built binaries for linux and darwin
+(amd64 + arm64) are attached to each GitHub release, along with a Claude Code
+skill file (`skill/SKILL.md`).
+
+### Install
+
+Download the archive matching your platform from the Releases page, extract,
+and place `budgeting-cli` somewhere on your `$PATH`.
+
+Alternatively, build from source:
+```bash
+CGO_ENABLED=0 go build -o bin/budgeting-cli ./cmd/budgeting-cli
+```
+
+### Configure
+
+```bash
+export BUDGETING_URL="http://localhost:8080"
+export BUDGETING_TOKEN="bdg_..."   # generated from the web UI
+```
+
+Generate a token at **User menu → API Tokens → Generate new token**. The raw
+token is shown exactly once.
+
+### Use
+
+Commands output compact JSON (add `--pretty` for indented). Example:
+```bash
+budgeting-cli me
+budgeting-cli categories list --type expense
+budgeting-cli actions list --from 2026-04-01 --to 2026-04-30
+budgeting-cli actions create --type expense --date 2026-04-19 \
+    --description "Groceries" --amount 42.50 --category 3
+```
+
+Run `budgeting-cli help` for the full command list.
+
+### Use with Claude Code
+
+Copy `skill/SKILL.md` (included in each release archive) to
+`~/.claude/skills/budgeting/SKILL.md`. Claude Code will pick it up and use
+`budgeting-cli` when the user asks to log transactions, query spending, etc.
 
 ## Security Notes
 
@@ -323,7 +398,7 @@ go test -v ./...
 ## Makefile Commands
 
 ```bash
-make build          # Build server and admin CLI
+make build          # Build server, admin CLI and budgeting-cli
 make run            # Build and run server
 make test           # Run tests
 make clean          # Clean build artifacts
