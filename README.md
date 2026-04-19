@@ -1,345 +1,219 @@
-# Budgeting App
+# Budgeting
 
-A secure, fast, and simple Progressive Web App (PWA) for managing income and expenses across multiple family members. Provides both individual budgeting views and aggregate family-level insights.
+A self-hosted Progressive Web App for tracking household income and expenses.
+One Go binary, embedded vanilla-JS frontend, SQLite storage. Works offline,
+installable on mobile, scriptable from the command line and from AI agents.
 
 ## Features
 
-### Core Functionality
-- **Secure Authentication**: Username/password authentication with bcrypt password hashing
-- **Session Management**: HTTP-only cookies with secure session storage
-- **Multi-user Support**: Track actions across multiple family members
-- **Action Management**: Create, edit, and delete income/expense entries with ownership controls
-- **Category Management**: Organize income and expenses with type-specific categories
-- **User Profiles**: Update name and change password through profile page
-- **Filtering**: Filter actions by user, type (income/expense), and date range
-- **Pagination**: Browse through all actions with 20 items per page
+**Money tracking**
+- Income and expense entries with required category, date, description, amount
+- Edit and delete your own entries inline; other users' entries are visible but read-only
+- Per-user, per-type categories (categories bound to either income or expense)
+- Filter by user, type, date range, category description, and full-text search
+- Greek-aware case-insensitive search (custom `lower_unicode()` SQL function)
+- Pagination on the full actions list
 
-### Visualization & Insights
-- **Monthly Charts**: Visual breakdown of income vs expenses by month using Chart.js
-- **Dashboard Overview**: Quick view of 10 most recent actions
-- **Charts Page**: Annual view of monthly income and expense trends
+**Visualization**
+- Dashboard with 10 most recent actions across all users
+- Monthly income vs. expense bar chart for any year
+- Category breakdown (expenses + income) for any month, per user or aggregate
 
-### User Experience
-- **Multi-language Support**: Full internationalization with English and Greek translations
-- **Dark/Light Theme**: Theme toggle with persistent preference
-- **Responsive Design**: Mobile-first design with burger menu for small screens (≤768px)
-- **Progressive Web App**: Installable on Android with offline support
-- **Inline Actions**: Click on your own actions to edit or delete them directly
+**Multi-user**
+- Family / team use with per-user ownership of entries
+- Shared categories across users
+- Admin-provisioned accounts (no public signup)
 
-### Administration
-- **Admin CLI**: Manage users and API tokens via command-line interface
-- **API Tokens**: Per-user tokens for programmatic access, managed from the web UI
-- **Agent-friendly CLI**: Standalone `budgeting-cli` client with a Claude Code skill bundled in releases
-- **Structured Logging**: JSON-formatted logs with request tracking
-- **Docker Support**: Production and development Docker Compose configurations
+**Authentication**
+- Username + password login with bcrypt hashing
+- Session cookies (HTTP-only, SameSite=Strict) for the web UI
+- Per-user **API tokens** (`bdg_...`) for scripts and AI agents — generated from
+  the web UI, optional expiry, soft-delete on revocation, throttled last-used
+  tracking
+- Token-based auth cannot manage other tokens (session-only gate)
 
-## Tech Stack
+**UX**
+- Dark / light theme with persistent preference
+- English + Greek UI, togglable
+- Mobile-first responsive layout with burger menu below 768px
+- Installable PWA with service worker and offline UI cache
 
-### Backend
-- **Go 1.26+** with Chi router
-- **SQLite3** database with foreign key constraints
-- **bcrypt** for password hashing
-- **slog** for structured JSON logging
-- Environment configuration via [caarlos0/env](https://github.com/caarlos0/env)
+**Operations**
+- Structured JSON logs with per-request tracking
+- Idempotent database migrations on startup
+- Two Docker Compose configurations (production, development)
+- Admin CLI for user and token management with direct database access
+- CI publishes Docker images to GHCR on version tags
+- CI publishes `budgeting-cli` binaries (linux/darwin × amd64/arm64) and the
+  Claude Code skill to GitHub Releases via GoReleaser
 
-### Frontend
-- Vanilla JavaScript (no build step required)
-- Custom CSS with CSS Variables for theming
-- Chart.js for data visualization
-- Service Worker for PWA functionality
-- Responsive mobile-first design with burger menu
+## Tech stack
 
-## Quick Start
+**Backend** — Go 1.26+, Chi router, SQLite3, bcrypt, slog, [caarlos0/env](https://github.com/caarlos0/env)
 
-### Prerequisites
-- Go 1.26 or later
-- Make (optional, for convenience)
-- Docker & Docker Compose (for containerized deployment)
+**Frontend** — Vanilla JavaScript (no build step), CSS variables, Chart.js, Service Worker
 
-### Local Development
+## Quick start
 
-1. **Clone the repository**
+### Local
+
 ```bash
-git clone <repository-url>
-cd budgeting
-```
-
-2. **Set environment variables**
-```bash
-export SESSION_SECRET="your-secret-key-here"
-export DATABASE_PATH="./data/budgeting.db"
-export PORT="8080"
-```
-
-3. **Build and run**
-```bash
-make run
-```
-
-Or manually:
-```bash
-CGO_ENABLED=1 go build -o bin/server ./cmd/server
-CGO_ENABLED=1 go build -o bin/admin ./cmd/admin
+export SESSION_SECRET="$(openssl rand -base64 32)"
+make build
+make admin ARGS="user:add -username alice -name Alice"   # create first user
 ./bin/server
 ```
 
-4. **Create your first user**
+Open http://localhost:8080 and log in.
+
+### Docker
+
 ```bash
-# In a separate terminal
-make admin ARGS="user:add -username admin -name Admin"
-```
-
-Or manually:
-```bash
-./bin/admin user:add -username admin -name Admin
-```
-
-5. **Access the app**
-Open your browser to `http://localhost:8080`
-
-### Docker Deployment
-
-Two Docker Compose configurations are provided:
-
-#### Production (`docker-compose.yml`)
-```bash
-# Create a .env file
 echo "SESSION_SECRET=$(openssl rand -base64 32)" > .env
-
-# Build and run
 docker compose up -d
-
-# Create users via CLI
-docker compose exec budgeting-app /app/admin user:add -username admin -name Admin
-
-# View logs
+docker compose exec budgeting-app /app/admin user:add -username alice -name Alice
 docker compose logs -f
 ```
 
-#### Development (`docker-compose.dev.yml`)
-```bash
-# Run development setup with exposed port 8080
-docker compose -f docker-compose.dev.yml up -d
-```
+The production `docker-compose.yml` keeps the port unexposed; use
+`docker-compose.dev.yml` if you want `localhost:8080` reachable directly.
 
-The production configuration keeps the port unexposed for security, while the development configuration exposes port 8080 for local access.
+## Configuration
 
-## CLI Commands
+| Variable          | Required | Default                  | Description                             |
+| ----------------- | -------- | ------------------------ | --------------------------------------- |
+| `SESSION_SECRET`  | **yes**  | —                        | Secret for session cookie encryption    |
+| `PORT`            | no       | `8080`                   | HTTP port                               |
+| `DATABASE_PATH`   | no       | `./data/budgeting.db`    | SQLite file path                        |
+| `LOG_LEVEL`       | no       | `info`                   | `debug` / `info` / `warn` / `error`     |
+| `CURRENCY`        | no       | `€`                      | Currency symbol displayed in the UI     |
 
-### User Management
+## Admin CLI
 
-#### Add User
-```bash
-./bin/admin user:add -username <username> -name <display-name>
-```
-- Prompts for password (6+ characters required)
-- Leave password empty to generate a random one
-
-#### Edit User
-```bash
-./bin/admin user:edit -username <username> [-name <new-name>]
-```
-- Prompts for new password (optional)
-
-#### Delete User
-```bash
-./bin/admin user:delete -username <username>
-```
-- Requires confirmation
-
-#### List Users
-```bash
-./bin/admin user:list
-```
-- Displays all users in table format
-
-### Actions Query
+The `admin` binary operates directly on the database (not through the API).
+Use it for bootstrap, user management, and token provisioning. Via make:
 
 ```bash
-./bin/admin actions:query -username <username> [-type income|expense] [-date-range YYYYMMDD-YYYYMMDD]
+make admin ARGS="<command> [flags]"
 ```
 
-**Examples:**
+Or directly: `./bin/admin <command> [flags]`.
+
+### User management
 ```bash
-# All actions for a user
-./bin/admin actions:query -username john
-
-# Only expenses
-./bin/admin actions:query -username john -type expense
-
-# Actions in date range
-./bin/admin actions:query -username john -date-range 20240101-20241231
+admin user:add     -username <name> -name "<display name>"   # prompts for password
+admin user:edit    -username <name> [-name "<new name>"]     # prompts for new password
+admin user:delete  -username <name>                          # confirmation required
+admin user:list
 ```
 
-## API Endpoints
+Leaving the password prompt empty on `user:add` generates a random one and
+prints it once.
+
+### Token management
+```bash
+admin token:list   -username <name>
+admin token:add    -username <name> -name <label> [-expires YYYY-MM-DD]
+admin token:delete -id <token-id>
+```
+
+`token:add` prints the raw token once — save it immediately.
+
+### Actions query
+```bash
+admin actions:query -username <name> [-type income|expense] [-date-range YYYYMMDD-YYYYMMDD]
+```
+
+## API reference
+
+All endpoints under `/api/*` return JSON. Dates are `YYYY-MM-DD`. Amounts are
+decimal with a `.` separator. Sign is implied by `type`.
 
 ### Authentication
-- `POST /api/login` - Login with username/password
-- `POST /api/logout` - Logout and clear session
-- `GET /api/me` - Get current user session info
+
+| Method | Auth      | Description                              |
+| ------ | --------- | ---------------------------------------- |
+| `POST /api/login`  | public  | `{username, password}` → sets session cookie |
+| `POST /api/logout` | session | Invalidates the session                  |
+| `GET /api/me`      | either  | Current user info                        |
+| `GET /api/config`  | public  | Public app config (currency symbol)      |
+
+Two auth methods are accepted on protected endpoints:
+
+- **Session cookie** — set automatically after `POST /api/login`.
+- **Bearer token** — `Authorization: Bearer bdg_...`, generated per-user from
+  the web UI under **User menu → API Tokens**.
 
 ### Actions
-- `GET /api/actions` - List actions (with filters)
-  - Query params: `username`, `type`, `date_from`, `date_to`, `limit`, `offset`
-  - Returns paginated response when `offset` is provided
-- `POST /api/actions` - Create new action
-  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 1}` (category_id is required)
-- `PUT /api/actions/{id}` - Update action (requires ownership)
-  - Body: `{"type": "income|expense", "date": "YYYY-MM-DD", "description": "...", "amount": 0.00, "category_id": 1}` (category_id is required)
-- `DELETE /api/actions/{id}` - Delete action (requires ownership)
+
+| Method | Path | Notes |
+| ------ | ---- | ----- |
+| `GET /api/actions`         | List with filters (see below) |
+| `POST /api/actions`        | Create — category required |
+| `PUT /api/actions/{id}`    | Update — ownership required |
+| `DELETE /api/actions/{id}` | Delete — ownership required |
+
+`GET /api/actions` query params:
+`username`, `type` (`income`/`expense`), `date_from`, `date_to` (inclusive),
+`search` (substring match on description, Greek-aware), `limit`, `offset`.
+
+When `offset` is present the response is paginated: `{"actions": [...], "total": N}`.
+Otherwise a plain array is returned.
+
+Create / update body:
+```json
+{"type":"expense","date":"2026-04-19","description":"Groceries","amount":42.50,"category_id":3}
+```
 
 ### Categories
-- `GET /api/categories` - List all categories
-  - Query params: `action_type` (optional, filter by income/expense)
-- `POST /api/categories` - Create new category
-  - Body: `{"description": "...", "action_type": "income|expense"}`
-- `PUT /api/categories/{id}` - Update category
-  - Body: `{"description": "...", "action_type": "income|expense"}`
-- `DELETE /api/categories/{id}` - Delete category (sets related actions' category_id to NULL)
+
+| Method | Path | Notes |
+| ------ | ---- | ----- |
+| `GET /api/categories`         | List; optional `action_type` filter |
+| `POST /api/categories`        | `{description, action_type}` |
+| `PUT /api/categories/{id}`    | Update |
+| `DELETE /api/categories/{id}` | Actions referencing the category keep their data but lose the link |
 
 ### Charts
-- `GET /api/charts/monthly` - Get monthly income/expense summary
-  - Query params: `year` (optional, defaults to current year)
+
+| Method | Path | Query params |
+| ------ | ---- | ------------ |
+| `GET /api/charts/monthly`    | `year` (default current), `username` |
+| `GET /api/charts/categories` | `year` (default current), `month` (default current), `username` |
 
 ### Users
-- `GET /api/users` - List all users (for filter dropdown)
-- `PUT /api/profile` - Update user profile (name and/or password)
 
-### API Tokens
-Session-only endpoints (cannot be called with a Bearer token — only from the logged-in UI).
-- `GET /api/tokens` - List the caller's active tokens
-- `POST /api/tokens` - Create a new token; response contains the raw token exactly once
-  - Body: `{"name": "...", "expires_at": "YYYY-MM-DD" | null}`
-- `DELETE /api/tokens/{id}` - Revoke a token (soft-delete)
+| Method | Path | Notes |
+| ------ | ---- | ----- |
+| `GET /api/users`     | All users (for filter dropdown) |
+| `PUT /api/profile`   | Update own name and/or password |
 
-### Configuration
-- `GET /api/config` - Get app configuration (e.g., currency symbol)
+### API tokens
 
-## API Authentication
+All three endpoints reject Bearer-token auth — session cookie only, so a
+compromised token cannot create or revoke other tokens.
 
-All `/api/*` endpoints (except `/api/login` and `/api/config`) require authentication.
-Two methods are accepted:
+| Method | Path | Notes |
+| ------ | ---- | ----- |
+| `GET /api/tokens`         | Caller's active tokens (no raw values returned) |
+| `POST /api/tokens`        | `{name, expires_at?}` — raw token in response, shown once |
+| `DELETE /api/tokens/{id}` | Soft-delete (row retained for audit) |
 
-- **Session cookie** — set automatically by the web UI after `/api/login`.
-- **Bearer token** — pass the raw token in an `Authorization: Bearer bdg_...` header.
+Tokens start with `bdg_`, carry 32 random bytes, and are stored as SHA-256
+hashes. Optional expiry (`expires_at`, null = never). `last_used_at` is
+updated asynchronously at most once per minute per token.
 
-Tokens are generated per user from the web UI under **User menu → API Tokens**. They
-have full access to the owning user's data but cannot manage other tokens. Deletion
-is a soft-delete; the record is retained for audit but the token stops working
-immediately.
+## Programmatic / AI agent access
 
-## Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PORT` | No | `8080` | Server port |
-| `DATABASE_PATH` | No | `./data/budgeting.db` | SQLite database file path |
-| `SESSION_SECRET` | **Yes** | - | Secret key for session encryption |
-| `LOG_LEVEL` | No | `info` | Logging level |
-| `CURRENCY` | No | `€` | Currency symbol to display |
-
-## Database Schema
-
-### Users Table
-```sql
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    name TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Categories Table
-```sql
-CREATE TABLE categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    description TEXT NOT NULL,
-    action_type TEXT NOT NULL CHECK(action_type IN ('income', 'expense')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Actions Table
-```sql
-CREATE TABLE actions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-    date DATE NOT NULL,
-    description TEXT NOT NULL,
-    amount REAL NOT NULL,
-    category_id INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
-);
-```
-
-## Testing
-
-Run all tests:
-```bash
-make test
-```
-
-Or manually:
-```bash
-go test -v ./...
-```
-
-## Project Structure
-
-```
-.
-├── cmd/
-│   ├── server/          # Main server application
-│   │   ├── main.go
-│   │   └── frontend/    # Frontend assets (embedded)
-│   │       ├── css/
-│   │       ├── js/
-│   │       ├── index.html
-│   │       ├── manifest.json
-│   │       └── sw.js
-│   ├── admin/           # Admin CLI tool (user + token management, direct DB access)
-│   │   └── main.go
-│   └── budgeting-cli/   # HTTP client for the API, intended for scripts and AI agents
-│       ├── main.go
-│       └── commands.go
-├── internal/
-│   ├── apiclient/       # HTTP client used by budgeting-cli
-│   ├── auth/            # Authentication, password hashing, API token helpers
-│   ├── config/          # Configuration management
-│   ├── database/        # Database operations
-│   ├── handlers/        # HTTP request handlers
-│   ├── middleware/      # HTTP middleware (auth, logging)
-│   └── models/          # Data models
-├── skill/
-│   └── SKILL.md         # Claude Code skill bundled with CLI releases
-├── .goreleaser.yaml     # CLI binary release config (linux/darwin, amd64/arm64)
-├── Dockerfile
-├── docker-compose.yml
-├── Makefile
-└── README.md
-```
-
-## Programmatic / AI Agent Access
-
-The `budgeting-cli` binary is a standalone HTTP client for the budgeting API,
-designed for scripts and AI agents. Pre-built binaries for linux and darwin
-(amd64 + arm64) are attached to each GitHub release, along with a Claude Code
-skill file (`skill/SKILL.md`).
+`budgeting-cli` is a standalone HTTP client for the API, shipped for scripts
+and AI agents. No CGO, cross-platform. Pre-built binaries for linux and darwin
+(amd64 + arm64) are attached to every GitHub release along with `skill/SKILL.md`.
 
 ### Install
 
-Download the archive matching your platform from the Releases page, extract,
-and place `budgeting-cli` somewhere on your `$PATH`.
+Download the archive for your platform from the Releases page and put
+`budgeting-cli` somewhere on `$PATH`. Or build from source:
 
-Alternatively, build from source:
 ```bash
 CGO_ENABLED=0 go build -o bin/budgeting-cli ./cmd/budgeting-cli
 ```
@@ -348,88 +222,76 @@ CGO_ENABLED=0 go build -o bin/budgeting-cli ./cmd/budgeting-cli
 
 ```bash
 export BUDGETING_URL="http://localhost:8080"
-export BUDGETING_TOKEN="bdg_..."   # generated from the web UI
+export BUDGETING_TOKEN="bdg_..."   # from User menu → API Tokens
 ```
-
-Generate a token at **User menu → API Tokens → Generate new token**. The raw
-token is shown exactly once.
 
 ### Use
 
-Commands output compact JSON (add `--pretty` for indented). Example:
+Compact JSON on stdout by default; `--pretty` for indented output.
+
 ```bash
 budgeting-cli me
 budgeting-cli categories list --type expense
-budgeting-cli actions list --from 2026-04-01 --to 2026-04-30
+budgeting-cli actions list --from 2026-04-01 --to 2026-04-30 --type expense
 budgeting-cli actions create --type expense --date 2026-04-19 \
-    --description "Groceries" --amount 42.50 --category 3
+  --description "Groceries" --amount 42.50 --category 3
+budgeting-cli charts monthly --year 2026 --pretty
 ```
 
-Run `budgeting-cli help` for the full command list.
+Run `budgeting-cli help` for the complete reference.
 
-### Use with Claude Code
+### Claude Code
 
-Copy `skill/SKILL.md` (included in each release archive) to
-`~/.claude/skills/budgeting/SKILL.md`. Claude Code will pick it up and use
-`budgeting-cli` when the user asks to log transactions, query spending, etc.
+Each release archive includes `skill/SKILL.md`. Copy it to
+`~/.claude/skills/budgeting/SKILL.md` and Claude Code will invoke
+`budgeting-cli` automatically when you ask to log, query, or analyze
+transactions — in English or Greek, including natural-language date ranges
+and semantic category matching.
 
-## Security Notes
+## Project structure
 
-- **Password Security**: Passwords are hashed using bcrypt before storage
-- **Session Security**: Sessions use HTTP-only cookies (not accessible via JavaScript)
-- **Authentication**: All API endpoints except `/api/login` and `/api/config` require authentication
-- **Ownership Controls**: Users can only edit/delete their own actions (enforced at database level)
-- **Data Integrity**: Foreign key constraints prevent orphaned data
-- **Input Validation**: All user-submitted data is validated on both frontend and backend
-- **CSRF Protection**: SameSite=Strict cookies prevent cross-site request forgery
+```
+cmd/
+  server/            HTTP server with embedded frontend
+    frontend/        HTML, CSS, JS, PWA manifest, service worker
+  admin/             Admin CLI (direct DB access, user + token management)
+  budgeting-cli/     HTTP client for scripts and AI agents
+internal/
+  apiclient/         HTTP client library used by budgeting-cli
+  auth/              Password hashing, session store, API token helpers
+  config/            Env-based configuration
+  database/          SQLite operations, migrations, query builders
+  handlers/          HTTP handlers
+  middleware/        Auth (session + Bearer), session-only guard, logging
+  models/            Data structs
+skill/SKILL.md       Claude Code skill bundled with CLI releases
+.goreleaser.yaml     CLI binary release config
+Dockerfile
+docker-compose.yml
+docker-compose.dev.yml
+Makefile
+```
 
-## PWA Installation
-
-### Android
-1. Open the app in Chrome
-2. Tap the menu (⋮) and select "Install app" or "Add to Home screen"
-3. The app will be installed and can be launched like a native app
-
-### Features
-- Works offline (with cached UI)
-- App icon on home screen
-- Standalone window (no browser UI)
-
-## Makefile Commands
+## Development
 
 ```bash
-make build          # Build server, admin CLI and budgeting-cli
-make run            # Build and run server
-make test           # Run tests
-make clean          # Clean build artifacts
-make admin          # Run admin CLI with arguments
-make docker-build   # Build Docker image
-make docker-up      # Start Docker containers
-make docker-down    # Stop Docker containers
-make docker-logs    # View Docker logs
+make build      # server + admin + budgeting-cli
+make run        # build + run server with development session secret
+make test       # go test ./...
+make clean      # remove bin/ and data/budgeting.db
 ```
 
-### User Management Shortcuts
-```bash
-make user-add -username john -name "John Doe"
-make user-list
-make user-edit -username john -name "John Smith"
-make user-delete -username john
-make actions-query -username john
-```
+Docker helpers: `make docker-build`, `docker-up`, `docker-down`, `docker-logs`.
 
-## Future Enhancements
+Database migrations run idempotently on startup; no separate migration step.
 
-- CSV/PDF exports
-- Role-based permissions
-- Recurring transactions
-- Budget limits & alerts
-- Email notifications
+## Security
 
-## License
-
-[Add your license here]
-
-## Contributing
-
-[Add contribution guidelines here]
+- Passwords are bcrypt-hashed; API tokens are SHA-256 hashed (tokens carry
+  full entropy, so the slow hash bcrypt provides is unnecessary).
+- All API endpoints except `/api/login` and `/api/config` require auth.
+- Session cookies are `HttpOnly` and `SameSite=Strict`.
+- Action edits and deletes are gated by ownership at the database level.
+- Category deletes do not cascade to actions (the `category_id` is cleared
+  instead — data is never lost when reorganising).
+- Token revocation is immediate and the audit record is preserved.
