@@ -43,6 +43,13 @@ const state = {
         message: null,
         isSubmitting: false
     },
+    tokensPage: {
+        tokens: [],
+        loading: false,
+        message: null,
+        isSubmitting: false,
+        newToken: null
+    },
     datePicker: {
         visible: false,
         targetInput: null,
@@ -495,6 +502,7 @@ function Header() {
                         </button>
                         <div id="user-menu" class="user-menu-dropdown hidden">
                             <button onclick="navigateTo('profile'); toggleUserMenu();">${t('nav.profile')}</button>
+                            <button onclick="navigateTo('api-tokens'); toggleUserMenu();">${t('nav.api_tokens')}</button>
                             <button onclick="logout()">${t('nav.logout')}</button>
                         </div>
                     </div>
@@ -531,6 +539,10 @@ function Header() {
                         <a href="#" onclick="navigateTo('profile'); toggleMobileMenu(); return false;"
                            class="mobile-nav-link ${state.currentPage === 'profile' ? 'active' : ''}">
                             ${t('nav.profile')}
+                        </a>
+                        <a href="#" onclick="navigateTo('api-tokens'); toggleMobileMenu(); return false;"
+                           class="mobile-nav-link ${state.currentPage === 'api-tokens' ? 'active' : ''}">
+                            ${t('nav.api_tokens')}
                         </a>
                         <div class="mobile-menu-divider"></div>
                         <button onclick="toggleTheme()" class="mobile-menu-btn">
@@ -1114,7 +1126,246 @@ function InlineMessage(message) {
 
 function dismissMessage() {
     state.profilePage.message = null;
+    state.tokensPage.message = null;
     render();
+}
+
+// API Tokens Page
+function APITokensPage() {
+    const tp = state.tokensPage;
+    return `
+        <div>
+            ${Header()}
+            <main class="dashboard-main">
+                <div class="container">
+                    <div class="profile-container">
+                        <div class="card profile-card">
+                            <h2 class="profile-title">${t('tokens.title')}</h2>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">${t('tokens.description')}</p>
+
+                            ${tp.message ? InlineMessage(tp.message) : ''}
+                            ${tp.newToken ? NewTokenCallout(tp.newToken) : ''}
+
+                            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                                <button class="btn btn-primary" onclick="openGenerateTokenModal()"
+                                        ${tp.isSubmitting ? 'disabled' : ''}>
+                                    ${t('tokens.generate')}
+                                </button>
+                            </div>
+
+                            ${tp.loading
+                                ? `<p style="text-align:center; color: var(--text-secondary);">${t('empty.loading_chart')}</p>`
+                                : (tp.tokens.length === 0
+                                    ? EmptyTokensState()
+                                    : TokensTable(tp.tokens))}
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <div id="modal-container"></div>
+        </div>
+    `;
+}
+
+function EmptyTokensState() {
+    return `
+        <div style="text-align:center; padding: 2rem 0;">
+            <h3 style="margin-bottom: 0.5rem;">${t('tokens.empty_title')}</h3>
+            <p style="color: var(--text-secondary);">${t('tokens.empty_text')}</p>
+        </div>
+    `;
+}
+
+function TokensTable(tokens) {
+    return `
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>${t('tokens.name')}</th>
+                        <th>${t('tokens.created')}</th>
+                        <th>${t('tokens.last_used')}</th>
+                        <th>${t('tokens.expires')}</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tokens.map(tok => `
+                        <tr>
+                            <td>${escapeHTML(tok.name)}</td>
+                            <td>${formatDateForDisplay(tok.created_at)}</td>
+                            <td>${tok.last_used_at ? formatDateForDisplay(tok.last_used_at) : t('tokens.never')}</td>
+                            <td>${tok.expires_at ? formatDateForDisplay(tok.expires_at) : t('tokens.never')}</td>
+                            <td class="text-right">
+                                <button class="btn btn-danger token-revoke-btn" onclick="deleteToken(${tok.id})">
+                                    ${t('tokens.delete')}
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function NewTokenCallout(token) {
+    return `
+        <div class="inline-message message-success" style="flex-direction: column; align-items: stretch;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>${t('tokens.created_success')}</strong>
+                <button onclick="dismissNewToken()" class="message-dismiss" type="button">×</button>
+            </div>
+            <p style="color: var(--text-secondary); margin: 0.5rem 0;">${t('tokens.copy_warning')}</p>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="text" readonly value="${escapeHTMLAttr(token)}" class="input"
+                       id="new-token-value" style="font-family: monospace;">
+                <button class="btn btn-secondary" onclick="copyNewToken()" id="copy-token-btn">
+                    ${t('tokens.copy')}
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function GenerateTokenModal() {
+    return `
+        <div class="modal-overlay" onclick="closeModal(event)">
+            <div class="modal-content" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2>${t('tokens.generate')}</h2>
+                    <button onclick="closeModal()" class="modal-close">&times;</button>
+                </div>
+                <form onsubmit="handleCreateToken(event)">
+                    <div class="form-group">
+                        <label>${t('tokens.name')} <span style="color: var(--danger);">*</span></label>
+                        <input type="text" id="new-token-name" class="input" maxlength="100" required
+                               placeholder="${t('tokens.name_placeholder')}">
+                    </div>
+                    <div class="form-group">
+                        <label>${t('tokens.expires')}</label>
+                        <input type="date" id="new-token-expires" class="input">
+                        <small style="color: var(--text-secondary); font-size: 0.875rem;">
+                            ${t('tokens.expires_note')}
+                        </small>
+                    </div>
+                    <div class="profile-actions">
+                        <button type="submit" class="btn btn-primary"
+                                ${state.tokensPage.isSubmitting ? 'disabled' : ''}>
+                            ${t('tokens.generate')}
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                            ${t('modal.cancel')}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+async function loadAPITokens() {
+    state.tokensPage.loading = true;
+    render();
+    try {
+        const res = await fetch('/api/tokens', { credentials: 'include' });
+        if (!res.ok) throw new Error('failed');
+        state.tokensPage.tokens = await res.json() || [];
+    } catch (e) {
+        state.tokensPage.message = { type: 'error', text: t('tokens.failed_list') };
+    } finally {
+        state.tokensPage.loading = false;
+        render();
+    }
+}
+
+function openGenerateTokenModal() {
+    document.getElementById('modal-container').innerHTML = GenerateTokenModal();
+}
+
+async function handleCreateToken(event) {
+    event.preventDefault();
+    const name = document.getElementById('new-token-name').value.trim();
+    const expires = document.getElementById('new-token-expires').value;
+    if (!name) {
+        state.tokensPage.message = { type: 'error', text: t('tokens.name_required') };
+        render();
+        return;
+    }
+    state.tokensPage.isSubmitting = true;
+    render();
+    try {
+        const body = { name };
+        if (expires) body.expires_at = expires;
+        const res = await fetch('/api/tokens', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'failed');
+        }
+        const created = await res.json();
+        state.tokensPage.newToken = created.token;
+        state.tokensPage.message = null;
+        closeModal();
+        await loadAPITokens();
+    } catch (e) {
+        state.tokensPage.message = { type: 'error', text: e.message || t('tokens.failed_create') };
+    } finally {
+        state.tokensPage.isSubmitting = false;
+        render();
+    }
+}
+
+async function deleteToken(id) {
+    if (!confirm(t('tokens.confirm_delete'))) return;
+    try {
+        const res = await fetch(`/api/tokens/${id}`, { method: 'DELETE', credentials: 'include' });
+        if (!res.ok) throw new Error('failed');
+        await loadAPITokens();
+    } catch (e) {
+        state.tokensPage.message = { type: 'error', text: t('tokens.failed_delete') };
+        render();
+    }
+}
+
+function dismissNewToken() {
+    state.tokensPage.newToken = null;
+    render();
+}
+
+async function copyNewToken() {
+    const input = document.getElementById('new-token-value');
+    const btn = document.getElementById('copy-token-btn');
+    if (!input) return;
+    try {
+        await navigator.clipboard.writeText(input.value);
+    } catch (_) {
+        input.select();
+        document.execCommand('copy');
+    }
+    if (btn) {
+        const original = btn.textContent;
+        btn.textContent = t('tokens.copied');
+        setTimeout(() => { btn.textContent = original; }, 1500);
+    }
+}
+
+function escapeHTML(str) {
+    if (str == null) return '';
+    return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function escapeHTMLAttr(str) {
+    return escapeHTML(str);
 }
 
 function renderChart() {
@@ -1812,6 +2063,10 @@ function navigateTo(page) {
     if (page !== 'profile') {
         state.profilePage.message = null;
     }
+    if (page !== 'api-tokens') {
+        state.tokensPage.message = null;
+        state.tokensPage.newToken = null;
+    }
 
     if (page === 'all-actions') {
         loadAllActions();
@@ -1824,6 +2079,10 @@ function navigateTo(page) {
         // No data loading needed - user info already in state
     } else if (page === 'categories') {
         loadAllCategories();
+    } else if (page === 'api-tokens') {
+        state.tokensPage.message = null;
+        state.tokensPage.newToken = null;
+        loadAPITokens();
     }
 
     render();
@@ -2028,6 +2287,8 @@ function render() {
             app.innerHTML = ProfilePage();
         } else if (state.currentPage === 'categories') {
             app.innerHTML = CategoriesPage();
+        } else if (state.currentPage === 'api-tokens') {
+            app.innerHTML = APITokensPage();
         } else {
             app.innerHTML = Dashboard();
         }
