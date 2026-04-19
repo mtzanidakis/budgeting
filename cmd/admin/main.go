@@ -27,7 +27,7 @@ func main() {
 
 	// Handle version command separately (no DB required)
 	if command == "version" {
-		fmt.Printf("budgeting-cli version %s\n", version.Get())
+		fmt.Printf("admin version %s\n", version.Get())
 		os.Exit(0)
 	}
 
@@ -65,7 +65,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("Usage: cli <command> [options]")
+	fmt.Println("Usage: admin <command> [options]")
 	fmt.Println("\nCommands:")
 	fmt.Println("  version")
 	fmt.Println("  user:add       -username <username> -name <name>")

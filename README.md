@@ -77,19 +77,19 @@ make run
 Or manually:
 ```bash
 CGO_ENABLED=1 go build -o bin/server ./cmd/server
-CGO_ENABLED=1 go build -o bin/cli ./cmd/cli
+CGO_ENABLED=1 go build -o bin/admin ./cmd/admin
 ./bin/server
 ```
 
 4. **Create your first user**
 ```bash
 # In a separate terminal
-make cli ARGS="user:add -username admin -name Admin"
+make admin ARGS="user:add -username admin -name Admin"
 ```
 
 Or manually:
 ```bash
-./bin/cli user:add -username admin -name Admin
+./bin/admin user:add -username admin -name Admin
 ```
 
 5. **Access the app**
@@ -108,7 +108,7 @@ echo "SESSION_SECRET=$(openssl rand -base64 32)" > .env
 docker compose up -d
 
 # Create users via CLI
-docker compose exec budgeting-app /app/cli user:add -username admin -name Admin
+docker compose exec budgeting-app /app/admin user:add -username admin -name Admin
 
 # View logs
 docker compose logs -f
@@ -128,45 +128,45 @@ The production configuration keeps the port unexposed for security, while the de
 
 #### Add User
 ```bash
-./bin/cli user:add -username <username> -name <display-name>
+./bin/admin user:add -username <username> -name <display-name>
 ```
 - Prompts for password (6+ characters required)
 - Leave password empty to generate a random one
 
 #### Edit User
 ```bash
-./bin/cli user:edit -username <username> [-name <new-name>]
+./bin/admin user:edit -username <username> [-name <new-name>]
 ```
 - Prompts for new password (optional)
 
 #### Delete User
 ```bash
-./bin/cli user:delete -username <username>
+./bin/admin user:delete -username <username>
 ```
 - Requires confirmation
 
 #### List Users
 ```bash
-./bin/cli user:list
+./bin/admin user:list
 ```
 - Displays all users in table format
 
 ### Actions Query
 
 ```bash
-./bin/cli actions:query -username <username> [-type income|expense] [-date-range YYYYMMDD-YYYYMMDD]
+./bin/admin actions:query -username <username> [-type income|expense] [-date-range YYYYMMDD-YYYYMMDD]
 ```
 
 **Examples:**
 ```bash
 # All actions for a user
-./bin/cli actions:query -username john
+./bin/admin actions:query -username john
 
 # Only expenses
-./bin/cli actions:query -username john -type expense
+./bin/admin actions:query -username john -type expense
 
 # Actions in date range
-./bin/cli actions:query -username john -date-range 20240101-20241231
+./bin/admin actions:query -username john -date-range 20240101-20241231
 ```
 
 ## API Endpoints
@@ -283,7 +283,7 @@ go test -v ./...
 │   │       ├── index.html
 │   │       ├── manifest.json
 │   │       └── sw.js
-│   └── cli/             # Admin CLI tool
+│   └── admin/           # Admin CLI tool
 │       └── main.go
 ├── internal/
 │   ├── auth/            # Authentication & password hashing
@@ -323,11 +323,11 @@ go test -v ./...
 ## Makefile Commands
 
 ```bash
-make build          # Build server and CLI
+make build          # Build server and admin CLI
 make run            # Build and run server
 make test           # Run tests
 make clean          # Clean build artifacts
-make cli            # Run CLI with arguments
+make admin          # Run admin CLI with arguments
 make docker-build   # Build Docker image
 make docker-up      # Start Docker containers
 make docker-down    # Stop Docker containers

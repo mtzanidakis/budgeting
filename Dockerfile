@@ -22,7 +22,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build \
     -o /app/server ./cmd/server
 RUN CGO_ENABLED=1 GOOS=linux go build \
     -ldflags "-X github.com/manolis/budgeting/internal/version.Version=${VERSION}" \
-    -o /app/cli ./cmd/cli
+    -o /app/admin ./cmd/admin
 
 # Runtime stage
 FROM alpine:latest
@@ -34,7 +34,7 @@ RUN apk add --no-cache ca-certificates sqlite-libs
 
 # Copy binaries from builder
 COPY --from=builder /app/server /app/server
-COPY --from=builder /app/cli /app/cli
+COPY --from=builder /app/admin /app/admin
 
 # Create data directory
 RUN mkdir -p /data

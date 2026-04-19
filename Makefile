@@ -1,13 +1,13 @@
-.PHONY: build run test clean cli docker-build docker-up docker-down
+.PHONY: build run test clean admin docker-build docker-up docker-down
 
 # Version from git commit hash, fallback to "dev"
 VERSION ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
 LDFLAGS := -X github.com/manolis/budgeting/internal/version.Version=$(VERSION)
 
-# Build the server and CLI
+# Build the server and admin CLI
 build:
 	CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -o bin/server ./cmd/server
-	CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -o bin/cli ./cmd/cli
+	CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -o bin/admin ./cmd/admin
 
 # Run the server locally
 run: build
@@ -17,9 +17,9 @@ run: build
 test:
 	go test -v ./...
 
-# Run CLI
-cli: build
-	SESSION_SECRET=development-secret ./bin/cli $(ARGS)
+# Run admin CLI
+admin: build
+	SESSION_SECRET=development-secret ./bin/admin $(ARGS)
 
 # Clean build artifacts
 clean:
@@ -44,19 +44,19 @@ dev: clean run
 
 # User management shortcuts
 user-add:
-	@$(MAKE) cli ARGS="user:add $(filter-out $@,$(MAKECMDGOALS))"
+	@$(MAKE) admin ARGS="user:add $(filter-out $@,$(MAKECMDGOALS))"
 
 user-list:
-	@$(MAKE) cli ARGS="user:list"
+	@$(MAKE) admin ARGS="user:list"
 
 user-edit:
-	@$(MAKE) cli ARGS="user:edit $(filter-out $@,$(MAKECMDGOALS))"
+	@$(MAKE) admin ARGS="user:edit $(filter-out $@,$(MAKECMDGOALS))"
 
 user-delete:
-	@$(MAKE) cli ARGS="user:delete $(filter-out $@,$(MAKECMDGOALS))"
+	@$(MAKE) admin ARGS="user:delete $(filter-out $@,$(MAKECMDGOALS))"
 
 actions-query:
-	@$(MAKE) cli ARGS="actions:query $(filter-out $@,$(MAKECMDGOALS))"
+	@$(MAKE) admin ARGS="actions:query $(filter-out $@,$(MAKECMDGOALS))"
 
 %:
 	@:

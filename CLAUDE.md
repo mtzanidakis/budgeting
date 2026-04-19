@@ -9,14 +9,14 @@ Multi-user income/expense tracking with categories, charts, and i18n (EN/EL).
 
 ```bash
 # CGO is required (SQLite3 driver)
-make build        # Build server + CLI to bin/
+make build        # Build server + admin CLI to bin/
 make run          # Build and run server
 make test         # go test -v ./...
 make clean        # Remove bin/
 
 # Manual build (version injected via ldflags)
 CGO_ENABLED=1 go build -o bin/server ./cmd/server
-CGO_ENABLED=1 go build -o bin/cli ./cmd/cli
+CGO_ENABLED=1 go build -o bin/admin ./cmd/admin
 ```
 
 ## Project Structure
@@ -24,7 +24,7 @@ CGO_ENABLED=1 go build -o bin/cli ./cmd/cli
 ```
 cmd/server/          Main HTTP server (Chi router), embeds frontend/
 cmd/server/frontend/ Static assets: HTML template, CSS, vanilla JS, PWA manifest
-cmd/cli/             Admin CLI for user management
+cmd/admin/           Admin CLI for user management
 internal/auth/       Password hashing (bcrypt), session store (in-memory)
 internal/config/     Env var config via caarlos0/env
 internal/database/   SQLite3 operations, schema migrations, query builders
