@@ -55,6 +55,7 @@ func main() {
 	actionsHandler := handlers.NewActionsHandler(db)
 	usersHandler := handlers.NewUsersHandler(db)
 	categoriesHandler := handlers.NewCategoriesHandler(db)
+	tokensHandler := handlers.NewTokensHandler(db)
 	configHandler := handlers.NewConfigHandler(cfg.Currency)
 	staticHandler, err := handlers.NewStaticHandler(staticFiles)
 	if err != nil {
@@ -90,6 +91,14 @@ func main() {
 		r.Post("/api/categories", categoriesHandler.Create)
 		r.Put("/api/categories/{id}", categoriesHandler.Update)
 		r.Delete("/api/categories/{id}", categoriesHandler.Delete)
+
+		// Token management — session-only (API tokens cannot manage tokens).
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequireSessionAuth())
+			r.Get("/api/tokens", tokensHandler.List)
+			r.Post("/api/tokens", tokensHandler.Create)
+			r.Delete("/api/tokens/{id}", tokensHandler.Delete)
+		})
 	})
 
 	// Serve static files with versioning
