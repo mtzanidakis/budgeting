@@ -9,13 +9,14 @@ import (
 )
 
 type ActionFilters struct {
-	Username  string
-	Type      string
-	DateFrom  string
-	DateTo    string
-	Limit     int
-	Offset    int
-	Search    string
+	Username   string
+	Type       string
+	DateFrom   string
+	DateTo     string
+	Limit      int
+	Offset     int
+	Search     string
+	CategoryID *int64
 }
 
 type MonthlySummary struct {
@@ -90,6 +91,11 @@ func (db *DB) ListActions(filters ActionFilters) ([]*models.Action, error) {
 		args = append(args, "%"+filters.Search+"%")
 	}
 
+	if filters.CategoryID != nil {
+		conditions = append(conditions, "category_id = ?")
+		args = append(args, *filters.CategoryID)
+	}
+
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -156,6 +162,11 @@ func (db *DB) CountActions(filters ActionFilters) (int, error) {
 		// Use custom lower_unicode function for proper Greek/Unicode case-insensitive search
 		conditions = append(conditions, "lower_unicode(description) LIKE lower_unicode(?)")
 		args = append(args, "%"+filters.Search+"%")
+	}
+
+	if filters.CategoryID != nil {
+		conditions = append(conditions, "category_id = ?")
+		args = append(args, *filters.CategoryID)
 	}
 
 	if len(conditions) > 0 {

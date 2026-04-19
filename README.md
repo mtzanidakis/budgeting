@@ -155,7 +155,8 @@ Two auth methods are accepted on protected endpoints:
 
 `GET /api/actions` query params:
 `username`, `type` (`income`/`expense`), `date_from`, `date_to` (inclusive),
-`search` (substring match on description, Greek-aware), `limit`, `offset`.
+`category_id`, `search` (substring match on description, Greek-aware),
+`limit`, `offset`.
 
 When `offset` is present the response is paginated: `{"actions": [...], "total": N}`.
 Otherwise a plain array is returned.

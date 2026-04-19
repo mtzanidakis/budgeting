@@ -84,6 +84,12 @@ func (h *ActionsHandler) List(w http.ResponseWriter, r *http.Request) {
 		Limit:    20,
 	}
 
+	if categoryStr := query.Get("category_id"); categoryStr != "" {
+		if categoryID, err := strconv.ParseInt(categoryStr, 10, 64); err == nil && categoryID > 0 {
+			filters.CategoryID = &categoryID
+		}
+	}
+
 	if limitStr := query.Get("limit"); limitStr != "" {
 		if limit, err := strconv.Atoi(limitStr); err == nil {
 			filters.Limit = limit
