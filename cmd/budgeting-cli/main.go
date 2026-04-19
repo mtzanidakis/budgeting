@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/manolis/budgeting/internal/version"
+	"github.com/mtzanidakis/budgeting/internal/version"
 )
 
 func main() {

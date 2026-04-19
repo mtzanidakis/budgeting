@@ -9,12 +9,12 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/manolis/budgeting/internal/auth"
-	"github.com/manolis/budgeting/internal/config"
-	"github.com/manolis/budgeting/internal/database"
-	"github.com/manolis/budgeting/internal/handlers"
-	"github.com/manolis/budgeting/internal/middleware"
-	"github.com/manolis/budgeting/internal/version"
+	"github.com/mtzanidakis/budgeting/internal/auth"
+	"github.com/mtzanidakis/budgeting/internal/config"
+	"github.com/mtzanidakis/budgeting/internal/database"
+	"github.com/mtzanidakis/budgeting/internal/handlers"
+	"github.com/mtzanidakis/budgeting/internal/middleware"
+	"github.com/mtzanidakis/budgeting/internal/version"
 )
 
 //go:embed all:frontend

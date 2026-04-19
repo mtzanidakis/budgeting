@@ -18,7 +18,7 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/manolis/budgeting/internal/version.Version={{.Version}}
+      - -X github.com/mtzanidakis/budgeting/internal/version.Version={{.Version}}
 
 archives:
   - id: budgeting-cli

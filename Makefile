@@ -2,7 +2,7 @@
 
 # Version from git commit hash, fallback to "dev"
 VERSION ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
-LDFLAGS := -X github.com/manolis/budgeting/internal/version.Version=$(VERSION)
+LDFLAGS := -X github.com/mtzanidakis/budgeting/internal/version.Version=$(VERSION)
 
 # Build the server, admin CLI and budgeting-cli
 build:

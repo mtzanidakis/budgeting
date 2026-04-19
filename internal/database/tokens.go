@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/manolis/budgeting/internal/models"
+	"github.com/mtzanidakis/budgeting/internal/models"
 )
 
 // CreateAPIToken inserts a new token record. The raw token is not stored; only tokenHash.

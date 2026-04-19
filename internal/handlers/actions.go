@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/manolis/budgeting/internal/database"
-	"github.com/manolis/budgeting/internal/middleware"
-	"github.com/manolis/budgeting/internal/models"
+	"github.com/mtzanidakis/budgeting/internal/database"
+	"github.com/mtzanidakis/budgeting/internal/middleware"
+	"github.com/mtzanidakis/budgeting/internal/models"
 )
 
 type ActionsHandler struct {

@@ -12,10 +12,10 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/manolis/budgeting/internal/auth"
-	"github.com/manolis/budgeting/internal/config"
-	"github.com/manolis/budgeting/internal/database"
-	"github.com/manolis/budgeting/internal/version"
+	"github.com/mtzanidakis/budgeting/internal/auth"
+	"github.com/mtzanidakis/budgeting/internal/config"
+	"github.com/mtzanidakis/budgeting/internal/database"
+	"github.com/mtzanidakis/budgeting/internal/version"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/manolis/budgeting/internal/auth"
-	"github.com/manolis/budgeting/internal/database"
-	"github.com/manolis/budgeting/internal/middleware"
+	"github.com/mtzanidakis/budgeting/internal/auth"
+	"github.com/mtzanidakis/budgeting/internal/database"
+	"github.com/mtzanidakis/budgeting/internal/middleware"
 )
 
 type AuthHandler struct {

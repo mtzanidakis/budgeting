@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manolis/budgeting/internal/auth"
-	"github.com/manolis/budgeting/internal/database"
+	"github.com/mtzanidakis/budgeting/internal/auth"
+	"github.com/mtzanidakis/budgeting/internal/database"
 )
 
 type contextKey string

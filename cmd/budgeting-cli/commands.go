@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/manolis/budgeting/internal/apiclient"
+	"github.com/mtzanidakis/budgeting/internal/apiclient"
 )
 
 // commonFlags registers the common flags (--url, --token, --pretty) on fs and

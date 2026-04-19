@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manolis/budgeting/internal/models"
+	"github.com/mtzanidakis/budgeting/internal/models"
 )
 
 type ActionFilters struct {

@@ -18,10 +18,10 @@ COPY . .
 
 # Build the server and CLI with version
 RUN CGO_ENABLED=1 GOOS=linux go build \
-    -ldflags "-X github.com/manolis/budgeting/internal/version.Version=${VERSION}" \
+    -ldflags "-X github.com/mtzanidakis/budgeting/internal/version.Version=${VERSION}" \
     -o /app/server ./cmd/server
 RUN CGO_ENABLED=1 GOOS=linux go build \
-    -ldflags "-X github.com/manolis/budgeting/internal/version.Version=${VERSION}" \
+    -ldflags "-X github.com/mtzanidakis/budgeting/internal/version.Version=${VERSION}" \
     -o /app/admin ./cmd/admin
 
 # Runtime stage

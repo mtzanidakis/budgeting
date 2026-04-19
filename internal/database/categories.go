@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/manolis/budgeting/internal/models"
+	"github.com/mtzanidakis/budgeting/internal/models"
 )
 
 func (db *DB) CreateCategory(description string, actionType models.ActionType) (*models.Category, error) {

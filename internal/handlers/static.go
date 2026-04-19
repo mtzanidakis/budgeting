@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/manolis/budgeting/internal/version"
+	"github.com/mtzanidakis/budgeting/internal/version"
 )
 
 // StaticHandler handles serving of template-based static files with version injection

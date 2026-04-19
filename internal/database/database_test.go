@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/manolis/budgeting/internal/auth"
-	"github.com/manolis/budgeting/internal/models"
+	"github.com/mtzanidakis/budgeting/internal/auth"
+	"github.com/mtzanidakis/budgeting/internal/models"
 )
 
 func setupTestDB(t *testing.T) *DB {

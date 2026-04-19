@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/manolis/budgeting/internal/database"
-	"github.com/manolis/budgeting/internal/models"
+	"github.com/mtzanidakis/budgeting/internal/database"
+	"github.com/mtzanidakis/budgeting/internal/models"
 )
 
 type CategoriesHandler struct {

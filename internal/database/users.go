@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/manolis/budgeting/internal/models"
+	"github.com/mtzanidakis/budgeting/internal/models"
 )
 
 func (db *DB) CreateUser(username, password, name string) (*models.User, error) {
