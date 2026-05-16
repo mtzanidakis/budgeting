@@ -116,7 +116,7 @@ func (db *DB) ListActions(filters ActionFilters) ([]*models.Action, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list actions: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var actions []*models.Action
 	for rows.Next() {
@@ -209,7 +209,7 @@ func (db *DB) GetMonthlySummary(year int, username string) ([]MonthlySummary, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to get monthly summary: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var summaries []MonthlySummary
 	for rows.Next() {
@@ -320,7 +320,7 @@ func (db *DB) GetCategorySummary(year, month int, actionType string, username st
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category summary: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var summaries []CategorySummary
 	for rows.Next() {

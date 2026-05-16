@@ -12,7 +12,7 @@ func setupTestDB(t *testing.T) *DB {
 	dbPath := "./test.db"
 
 	// Remove existing test database
-	os.Remove(dbPath)
+	_ = os.Remove(dbPath)
 
 	db, err := New(dbPath)
 	if err != nil {
@@ -24,8 +24,8 @@ func setupTestDB(t *testing.T) *DB {
 	}
 
 	t.Cleanup(func() {
-		db.Close()
-		os.Remove(dbPath)
+		_ = db.Close()
+		_ = os.Remove(dbPath)
 	})
 
 	return db

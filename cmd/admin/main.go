@@ -16,7 +16,7 @@ import (
 	"github.com/mtzanidakis/budgeting/internal/config"
 	"github.com/mtzanidakis/budgeting/internal/database"
 	"github.com/mtzanidakis/budgeting/internal/version"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.Migrate(); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
@@ -90,7 +90,7 @@ func handleUserAdd(db *database.DB) {
 	fs := flag.NewFlagSet("user:add", flag.ExitOnError)
 	username := fs.String("username", "", "Username (required)")
 	name := fs.String("name", "", "Display name (required)")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	if *username == "" || *name == "" {
 		fmt.Println("Error: -username and -name are required")
@@ -137,7 +137,7 @@ func handleUserEdit(db *database.DB) {
 	fs := flag.NewFlagSet("user:edit", flag.ExitOnError)
 	username := fs.String("username", "", "Username (required)")
 	name := fs.String("name", "", "New display name")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	if *username == "" {
 		fmt.Println("Error: -username is required")
@@ -180,7 +180,7 @@ func handleUserEdit(db *database.DB) {
 func handleUserDelete(db *database.DB) {
 	fs := flag.NewFlagSet("user:delete", flag.ExitOnError)
 	username := fs.String("username", "", "Username (required)")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	if *username == "" {
 		fmt.Println("Error: -username is required")
@@ -212,11 +212,11 @@ func handleUserList(db *database.DB) {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tUSERNAME\tNAME\tCREATED AT\tUPDATED AT")
-	fmt.Fprintln(w, "---\t--------\t----\t----------\t----------")
+	_, _ = fmt.Fprintln(w, "ID\tUSERNAME\tNAME\tCREATED AT\tUPDATED AT")
+	_, _ = fmt.Fprintln(w, "---\t--------\t----\t----------\t----------")
 
 	for _, user := range users {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\n",
 			user.ID,
 			user.Username,
 			user.Name,
@@ -225,7 +225,7 @@ func handleUserList(db *database.DB) {
 		)
 	}
 
-	w.Flush()
+	_ = w.Flush()
 }
 
 func handleActionsQuery(db *database.DB) {
@@ -233,7 +233,7 @@ func handleActionsQuery(db *database.DB) {
 	username := fs.String("username", "", "Username (required)")
 	actionType := fs.String("type", "", "Action type (income|expense)")
 	dateRange := fs.String("date-range", "", "Date range (YYYYMMDD-YYYYMMDD)")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	if *username == "" {
 		fmt.Println("Error: -username is required")
@@ -266,11 +266,11 @@ func handleActionsQuery(db *database.DB) {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "DATE\tTYPE\tDESCRIPTION\tAMOUNT\tCREATED AT")
-	fmt.Fprintln(w, "----\t----\t-----------\t------\t----------")
+	_, _ = fmt.Fprintln(w, "DATE\tTYPE\tDESCRIPTION\tAMOUNT\tCREATED AT")
+	_, _ = fmt.Fprintln(w, "----\t----\t-----------\t------\t----------")
 
 	for _, action := range actions {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%.2f\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%.2f\t%s\n",
 			action.Date,
 			action.Type,
 			action.Description,
@@ -279,12 +279,12 @@ func handleActionsQuery(db *database.DB) {
 		)
 	}
 
-	w.Flush()
+	_ = w.Flush()
 }
 
 func readPassword(prompt string) string {
 	fmt.Print(prompt)
-	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 	fmt.Println()
 	if err != nil {
 		return ""
@@ -295,7 +295,7 @@ func readPassword(prompt string) string {
 func handleTokenList(db *database.DB) {
 	fs := flag.NewFlagSet("token:list", flag.ExitOnError)
 	username := fs.String("username", "", "Username (required)")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	if *username == "" {
 		fmt.Println("Error: -username is required")
@@ -314,8 +314,8 @@ func handleTokenList(db *database.DB) {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tNAME\tCREATED\tLAST USED\tEXPIRES")
-	fmt.Fprintln(w, "---\t----\t-------\t---------\t-------")
+	_, _ = fmt.Fprintln(w, "ID\tNAME\tCREATED\tLAST USED\tEXPIRES")
+	_, _ = fmt.Fprintln(w, "---\t----\t-------\t---------\t-------")
 	for _, t := range tokens {
 		lastUsed := "never"
 		if t.LastUsedAt != nil {
@@ -325,9 +325,9 @@ func handleTokenList(db *database.DB) {
 		if t.ExpiresAt != nil {
 			expires = t.ExpiresAt.Format("2006-01-02")
 		}
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\n", t.ID, t.Name, t.CreatedAt.Format("2006-01-02 15:04:05"), lastUsed, expires)
+		_, _ = fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\n", t.ID, t.Name, t.CreatedAt.Format("2006-01-02 15:04:05"), lastUsed, expires)
 	}
-	w.Flush()
+	_ = w.Flush()
 }
 
 func handleTokenAdd(db *database.DB) {
@@ -335,7 +335,7 @@ func handleTokenAdd(db *database.DB) {
 	username := fs.String("username", "", "Username (required)")
 	name := fs.String("name", "", "Token label (required)")
 	expires := fs.String("expires", "", "Expiry date (YYYY-MM-DD, optional)")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	if *username == "" || *name == "" {
 		fmt.Println("Error: -username and -name are required")
@@ -379,7 +379,7 @@ func handleTokenAdd(db *database.DB) {
 func handleTokenDelete(db *database.DB) {
 	fs := flag.NewFlagSet("token:delete", flag.ExitOnError)
 	idStr := fs.String("id", "", "Token ID (required)")
-	fs.Parse(os.Args[2:])
+	_ = fs.Parse(os.Args[2:])
 
 	if *idStr == "" {
 		fmt.Println("Error: -id is required")

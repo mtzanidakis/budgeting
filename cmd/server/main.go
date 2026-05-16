@@ -39,7 +39,7 @@ func main() {
 		logger.Error("Failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Run migrations
 	if err := db.Migrate(); err != nil {

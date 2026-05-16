@@ -1,0 +1,31 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Install SQLite dev headers
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        env:
+          CGO_ENABLED: "1"
+        with:
+          version: v2.12.2

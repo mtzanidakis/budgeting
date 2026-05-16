@@ -46,7 +46,7 @@ func (db *DB) ListAPITokensByUser(userID int64) ([]*models.APIToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list api tokens: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tokens []*models.APIToken
 	for rows.Next() {
