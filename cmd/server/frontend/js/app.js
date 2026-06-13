@@ -128,12 +128,24 @@ function selectDate(day) {
     const dayStr = String(day).padStart(2, '0');
     const dateStr = `${dayStr}/${month}/${state.datePicker.currentYear}`;
 
-    const input = document.getElementById(state.datePicker.targetInput);
+    const targetId = state.datePicker.targetInput;
+    const input = document.getElementById(targetId);
     if (input) {
         input.value = dateStr;
         // Trigger change event
         const event = new Event('change', { bubbles: true });
         input.dispatchEvent(event);
+    }
+    // Filter inputs must also sync to state, otherwise the next render()
+    // (e.g. triggered by typing in search) rebuilds them from stale state.
+    if (targetId === 'all-actions-date-from') {
+        state.allActionsPage.filters.date_from = dateStr;
+        state.allActionsPage.pagination.currentPage = 1;
+        loadAllActions();
+    } else if (targetId === 'all-actions-date-to') {
+        state.allActionsPage.filters.date_to = dateStr;
+        state.allActionsPage.pagination.currentPage = 1;
+        loadAllActions();
     }
     hideDatePicker();
 }
