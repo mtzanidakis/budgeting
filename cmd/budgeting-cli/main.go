@@ -39,6 +39,8 @@ func main() {
 		runCategories(args)
 	case "charts":
 		runCharts(args)
+	case "upgrade":
+		runUpgrade(args)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
 		printUsage()
@@ -71,5 +73,6 @@ Commands:
   categories delete ID
   charts monthly     [--year YYYY]
   charts categories  [--year YYYY] [--month M]
-  version`)
+  version
+  upgrade            [--check] [--version vX.Y.Z] [--yes]`)
 }
