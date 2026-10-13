@@ -258,6 +258,11 @@ func (db *DB) UpdateAction(actionID, userID int64, actionType models.ActionType,
 		return nil, fmt.Errorf("action not found or not owned by user")
 	}
 
+	var createdAt time.Time
+	if err := db.QueryRow("SELECT created_at FROM actions WHERE id = ?", actionID).Scan(&createdAt); err != nil {
+		return nil, fmt.Errorf("failed to get action created_at: %w", err)
+	}
+
 	return &models.Action{
 		ID:          actionID,
 		UserID:      userID,
@@ -266,6 +271,7 @@ func (db *DB) UpdateAction(actionID, userID int64, actionType models.ActionType,
 		Description: description,
 		Amount:      amount,
 		CategoryID:  categoryID,
+		CreatedAt:   createdAt,
 		UpdatedAt:   now,
 	}, nil
 }

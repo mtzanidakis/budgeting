@@ -156,3 +156,54 @@ func TestActionsCRUD(t *testing.T) {
 		t.Fatalf("Expected 0 actions, got %d", len(actions))
 	}
 }
+
+func TestUpdatePreservesCreatedAt(t *testing.T) {
+	db := setupTestDB(t)
+
+	password, _ := auth.HashPassword("test-password")
+	user, _ := db.CreateUser("testuser", password, "Test User")
+
+	category, err := db.CreateCategory("Groceries", models.ActionTypeExpense)
+	if err != nil {
+		t.Fatalf("CreateCategory failed: %v", err)
+	}
+
+	updatedCategory, err := db.UpdateCategory(category.ID, "Food", models.ActionTypeExpense)
+	if err != nil {
+		t.Fatalf("UpdateCategory failed: %v", err)
+	}
+
+	if updatedCategory.CreatedAt.IsZero() {
+		t.Fatal("UpdateCategory returned zero CreatedAt")
+	}
+
+	if updatedCategory.Description != "Food" {
+		t.Fatalf("Expected description 'Food', got '%s'", updatedCategory.Description)
+	}
+
+	action, err := db.CreateAction(user.ID, models.ActionTypeExpense, "2024-01-01", "Test expense", 100.50, &category.ID)
+	if err != nil {
+		t.Fatalf("CreateAction failed: %v", err)
+	}
+
+	updatedAction, err := db.UpdateAction(action.ID, user.ID, models.ActionTypeExpense, "2024-01-02", "Updated expense", 42, &category.ID)
+	if err != nil {
+		t.Fatalf("UpdateAction failed: %v", err)
+	}
+
+	if updatedAction.CreatedAt.IsZero() {
+		t.Fatal("UpdateAction returned zero CreatedAt")
+	}
+
+	if !updatedAction.CreatedAt.Equal(action.CreatedAt) {
+		t.Fatalf("Expected CreatedAt %v, got %v", action.CreatedAt, updatedAction.CreatedAt)
+	}
+
+	if updatedAction.Description != "Updated expense" || updatedAction.Amount != 42 || updatedAction.Date != "2024-01-02" {
+		t.Fatalf("UpdateAction returned stale fields: %+v", updatedAction)
+	}
+
+	if _, err := db.UpdateAction(action.ID, user.ID+1, models.ActionTypeExpense, "2024-01-02", "x", 1, &category.ID); err == nil {
+		t.Fatal("UpdateAction should fail for a non-owner")
+	}
+}
