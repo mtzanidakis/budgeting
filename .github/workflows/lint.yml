@@ -18,7 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: stable
+          go-version-file: go.mod
 
       - name: Install SQLite dev headers
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
@@ -28,4 +28,4 @@ jobs:
         env:
           CGO_ENABLED: "1"
         with:
-          version: v2.13.2
+          version: v2.14.0
