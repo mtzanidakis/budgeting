@@ -98,12 +98,7 @@ func (db *DB) UpdateCategory(categoryID int64, description string, actionType mo
 		return nil, fmt.Errorf("category not found")
 	}
 
-	return &models.Category{
-		ID:          categoryID,
-		Description: description,
-		ActionType:  actionType,
-		UpdatedAt:   now,
-	}, nil
+	return db.GetCategoryByID(categoryID)
 }
 
 func (db *DB) DeleteCategory(categoryID int64) error {
