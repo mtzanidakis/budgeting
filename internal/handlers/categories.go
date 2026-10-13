@@ -162,6 +162,7 @@ func (h *CategoriesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		ID:          category.ID,
 		Description: category.Description,
 		ActionType:  string(category.ActionType),
+		CreatedAt:   category.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   category.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
 }
