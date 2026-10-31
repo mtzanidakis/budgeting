@@ -3,6 +3,7 @@ package database
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/mtzanidakis/budgeting/internal/auth"
 	"github.com/mtzanidakis/budgeting/internal/models"
@@ -205,5 +206,105 @@ func TestUpdatePreservesCreatedAt(t *testing.T) {
 
 	if _, err := db.UpdateAction(action.ID, user.ID+1, models.ActionTypeExpense, "2024-01-02", "x", 1, &category.ID); err == nil {
 		t.Fatal("UpdateAction should fail for a non-owner")
+	}
+}
+
+func TestSessions(t *testing.T) {
+	db := setupTestDB(t)
+
+	password, _ := auth.HashPassword("test-password")
+	user, err := db.CreateUser("sessuser", password, "Session User")
+	if err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+	other, err := db.CreateUser("otheruser", password, "Other User")
+	if err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+
+	now := time.Now()
+	id1, err := db.CreateSession(user.ID, "hash1", now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("CreateSession failed: %v", err)
+	}
+	id2, err := db.CreateSession(user.ID, "hash2", now, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("CreateSession failed: %v", err)
+	}
+	if _, err := db.CreateSession(other.ID, "hash3", now, now.Add(time.Hour)); err != nil {
+		t.Fatalf("CreateSession failed: %v", err)
+	}
+
+	// Duplicate token hash must be rejected.
+	if _, err := db.CreateSession(user.ID, "hash1", now, now.Add(time.Hour)); err == nil {
+		t.Fatal("Expected duplicate token hash to fail")
+	}
+
+	s, err := db.GetSessionByHash("hash1")
+	if err != nil || s == nil {
+		t.Fatalf("GetSessionByHash failed: %v", err)
+	}
+	if s.ID != id1 || s.UserID != user.ID || s.Username != "sessuser" {
+		t.Fatalf("Unexpected session: %+v", s)
+	}
+	if !s.ExpiresAt.Equal(now.Add(time.Hour).UTC()) {
+		t.Fatalf("ExpiresAt round-trip mismatch: want %v got %v", now.Add(time.Hour).UTC(), s.ExpiresAt)
+	}
+
+	if s, err := db.GetSessionByHash("missing"); err != nil || s != nil {
+		t.Fatalf("Expected (nil, nil) for missing session, got %v, %v", s, err)
+	}
+
+	// Renew
+	later := now.Add(10 * time.Minute)
+	if err := db.RenewSession(id1, later, later.Add(48*time.Hour)); err != nil {
+		t.Fatalf("RenewSession failed: %v", err)
+	}
+	s, _ = db.GetSessionByHash("hash1")
+	if !s.LastUsedAt.Equal(later.UTC()) || !s.ExpiresAt.Equal(later.Add(48*time.Hour).UTC()) {
+		t.Fatalf("Renew not persisted: %+v", s)
+	}
+
+	// Delete all of a user's sessions except the current one.
+	n, err := db.DeleteUserSessions(user.ID, id1)
+	if err != nil || n != 1 {
+		t.Fatalf("DeleteUserSessions: n=%d err=%v", n, err)
+	}
+	if s, _ := db.GetSessionByHash("hash2"); s != nil {
+		t.Fatalf("Session %d should have been revoked", id2)
+	}
+	if s, _ := db.GetSessionByHash("hash1"); s == nil {
+		t.Fatal("Current session should be kept")
+	}
+	if s, _ := db.GetSessionByHash("hash3"); s == nil {
+		t.Fatal("Other user's session should be untouched")
+	}
+
+	// Delete expired: hash3 expires in 1h, hash1 in ~48h.
+	n, err = db.DeleteExpiredSessions(now.Add(2 * time.Hour))
+	if err != nil || n != 1 {
+		t.Fatalf("DeleteExpiredSessions: n=%d err=%v", n, err)
+	}
+	if s, _ := db.GetSessionByHash("hash3"); s != nil {
+		t.Fatal("Expired session should be removed")
+	}
+
+	// Logout
+	if err := db.DeleteSessionByHash("hash1"); err != nil {
+		t.Fatalf("DeleteSessionByHash failed: %v", err)
+	}
+	if s, _ := db.GetSessionByHash("hash1"); s != nil {
+		t.Fatal("Session should be deleted")
+	}
+
+	// Cascade on user delete
+	if _, err := db.CreateSession(other.ID, "hash4", now, now.Add(time.Hour)); err != nil {
+		t.Fatalf("CreateSession failed: %v", err)
+	}
+	if err := db.DeleteUser("otheruser"); err != nil {
+		t.Fatalf("DeleteUser failed: %v", err)
+	}
+	if s, _ := db.GetSessionByHash("hash4"); s != nil {
+		t.Fatal("Sessions should be removed when the user is deleted")
 	}
 }

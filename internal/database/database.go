@@ -93,6 +93,17 @@ func (db *DB) Migrate() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id) WHERE deleted_at IS NULL`,
 		`CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens(token_hash) WHERE deleted_at IS NULL`,
+		`CREATE TABLE IF NOT EXISTS sessions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL,
+			token_hash TEXT NOT NULL UNIQUE,
+			created_at DATETIME NOT NULL,
+			last_used_at DATETIME NOT NULL,
+			expires_at DATETIME NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)`,
 	}
 
 	for _, query := range queries {

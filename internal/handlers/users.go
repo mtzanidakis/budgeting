@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -161,6 +162,14 @@ func (h *UsersHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 			Message: "Failed to update profile",
 		})
 		return
+	}
+
+	// A password change logs out every other session of this user. The
+	// current session (if any; ID is 0 for API-token requests) stays valid.
+	if passwordPtr != nil {
+		if _, err := h.db.DeleteUserSessions(user.ID, session.ID); err != nil {
+			slog.Error("failed to revoke sessions after password change", "user_id", user.ID, "error", err)
+		}
 	}
 
 	// Return success with updated user info
