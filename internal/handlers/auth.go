@@ -64,6 +64,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Drop any session this browser was already carrying so re-logins don't
+	// leave orphaned rows behind until they expire.
+	if old, err := r.Cookie(auth.SessionCookieName); err == nil {
+		if err := h.sessionStore.Delete(old.Value); err != nil {
+			slog.Warn("failed to delete previous session on login", "error", err)
+		}
+	}
+
 	token, session, err := h.sessionStore.Create(user.ID, user.Username)
 	if err != nil {
 		slog.Error("failed to create session", "user_id", user.ID, "error", err)
@@ -92,6 +100,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	// Always clear the cookie, even if deleting the server-side row fails, so
+	// the browser can't silently resume the session on the next page load.
+	http.SetCookie(w, auth.ClearSessionCookie())
+
 	cookie, err := r.Cookie(auth.SessionCookieName)
 	if err == nil {
 		if err := h.sessionStore.Delete(cookie.Value); err != nil {
@@ -103,8 +115,6 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	http.SetCookie(w, auth.ClearSessionCookie())
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,

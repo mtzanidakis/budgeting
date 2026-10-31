@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -24,6 +25,10 @@ const (
 	// the same session, so we don't write to the DB on every request.
 	SessionRenewInterval = time.Hour
 )
+
+// ErrSessionNotFound is returned by SessionStore.Get when the token does not
+// match a live session (unknown, revoked or expired).
+var ErrSessionNotFound = errors.New("session not found")
 
 // Session is the authenticated identity attached to a request context.
 // For API-token requests it is synthesized and ID is 0.
@@ -82,28 +87,29 @@ func (s *SessionStore) Create(userID int64, username string) (string, *Session, 
 	}, nil
 }
 
-// Get looks up a session by raw token. Expired sessions are deleted and
-// reported as not found.
-func (s *SessionStore) Get(token string) (*Session, bool) {
+// Get looks up a session by raw token. It returns ErrSessionNotFound for
+// unknown or expired tokens (expired sessions are deleted) and any other
+// error for storage failures, so callers can tell "log in again" apart from
+// "try again later".
+func (s *SessionStore) Get(token string) (*Session, error) {
 	if token == "" {
-		return nil, false
+		return nil, ErrSessionNotFound
 	}
 
 	hash := hashToken(token)
 	rec, err := s.repo.GetSessionByHash(hash)
 	if err != nil {
-		slog.Warn("failed to look up session", "error", err)
-		return nil, false
+		return nil, fmt.Errorf("failed to look up session: %w", err)
 	}
 	if rec == nil {
-		return nil, false
+		return nil, ErrSessionNotFound
 	}
 
 	if !rec.ExpiresAt.After(s.now()) {
 		if err := s.repo.DeleteSessionByHash(hash); err != nil {
 			slog.Warn("failed to delete expired session", "session_id", rec.ID, "error", err)
 		}
-		return nil, false
+		return nil, ErrSessionNotFound
 	}
 
 	return &Session{
@@ -113,7 +119,7 @@ func (s *SessionStore) Get(token string) (*Session, bool) {
 		CreatedAt:  rec.CreatedAt,
 		LastUsedAt: rec.LastUsedAt,
 		ExpiresAt:  rec.ExpiresAt,
-	}, true
+	}, nil
 }
 
 // Renew slides the session's expiry forward if it was last renewed more than

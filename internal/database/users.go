@@ -88,36 +88,59 @@ func (db *DB) ListUsers() ([]*models.User, error) {
 	return users, nil
 }
 
-func (db *DB) UpdateUser(username string, password, name *string) error {
+// UpdateUser updates the user's password and/or name. When the password
+// changes, every session of the user except keepSessionID (0 = revoke all) is
+// deleted in the same transaction, so a password change can never succeed
+// while leaving old sessions valid. Returns the number of revoked sessions.
+func (db *DB) UpdateUser(username string, password, name *string, keepSessionID int64) (int64, error) {
 	user, err := db.GetUserByUsername(username)
 	if err != nil {
-		return err
+		return 0, err
 	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 
 	if password != nil && name != nil {
-		_, err = db.Exec(
+		_, err = tx.Exec(
 			"UPDATE users SET password = ?, name = ?, updated_at = ? WHERE id = ?",
 			*password, *name, now, user.ID,
 		)
 	} else if password != nil {
-		_, err = db.Exec(
+		_, err = tx.Exec(
 			"UPDATE users SET password = ?, updated_at = ? WHERE id = ?",
 			*password, now, user.ID,
 		)
 	} else if name != nil {
-		_, err = db.Exec(
+		_, err = tx.Exec(
 			"UPDATE users SET name = ?, updated_at = ? WHERE id = ?",
 			*name, now, user.ID,
 		)
 	}
-
 	if err != nil {
-		return fmt.Errorf("failed to update user: %w", err)
+		return 0, fmt.Errorf("failed to update user: %w", err)
 	}
 
-	return nil
+	var revoked int64
+	if password != nil {
+		result, err := tx.Exec(`DELETE FROM sessions WHERE user_id = ? AND id != ?`, user.ID, keepSessionID)
+		if err != nil {
+			return 0, fmt.Errorf("failed to revoke user sessions: %w", err)
+		}
+		if revoked, err = result.RowsAffected(); err != nil {
+			return 0, fmt.Errorf("failed to get rows affected: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit user update: %w", err)
+	}
+	return revoked, nil
 }
 
 func (db *DB) DeleteUser(username string) error {

@@ -35,12 +35,12 @@ func (db *DB) CreateSession(userID int64, tokenHash string, createdAt, expiresAt
 func (db *DB) GetSessionByHash(tokenHash string) (*models.Session, error) {
 	var s models.Session
 	err := db.QueryRow(
-		`SELECT s.id, s.user_id, u.username, s.token_hash, s.created_at, s.last_used_at, s.expires_at
+		`SELECT s.id, s.user_id, u.username, s.created_at, s.last_used_at, s.expires_at
 		 FROM sessions s
 		 JOIN users u ON u.id = s.user_id
 		 WHERE s.token_hash = ?`,
 		tokenHash,
-	).Scan(&s.ID, &s.UserID, &s.Username, &s.TokenHash, &s.CreatedAt, &s.LastUsedAt, &s.ExpiresAt)
+	).Scan(&s.ID, &s.UserID, &s.Username, &s.CreatedAt, &s.LastUsedAt, &s.ExpiresAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -69,20 +69,6 @@ func (db *DB) DeleteSessionByHash(tokenHash string) error {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 	return nil
-}
-
-// DeleteUserSessions removes all sessions of a user except exceptID (pass 0 to
-// remove them all). Returns the number of sessions removed.
-func (db *DB) DeleteUserSessions(userID, exceptID int64) (int64, error) {
-	result, err := db.Exec(`DELETE FROM sessions WHERE user_id = ? AND id != ?`, userID, exceptID)
-	if err != nil {
-		return 0, fmt.Errorf("failed to delete user sessions: %w", err)
-	}
-	n, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get rows affected: %w", err)
-	}
-	return n, nil
 }
 
 // DeleteExpiredSessions removes sessions whose expires_at is at or before now.

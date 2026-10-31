@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -42,9 +43,15 @@ func Auth(sessionStore *auth.SessionStore, db *database.DB) func(http.Handler) h
 				return
 			}
 
-			session, ok := sessionStore.Get(cookie.Value)
-			if !ok {
+			session, err := sessionStore.Get(cookie.Value)
+			if errors.Is(err, auth.ErrSessionNotFound) {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			if err != nil {
+				// Storage failure: don't turn a transient DB error into a logout.
+				slog.Error("session lookup failed", "error", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 

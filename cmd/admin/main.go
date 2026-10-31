@@ -170,22 +170,14 @@ func handleUserEdit(db *database.DB) {
 		os.Exit(0)
 	}
 
-	if err := db.UpdateUser(*username, hashedPassword, newName); err != nil {
+	revoked, err := db.UpdateUser(*username, hashedPassword, newName, 0)
+	if err != nil {
 		log.Fatalf("Failed to update user: %v", err)
 	}
 
 	fmt.Println("User updated successfully")
-
 	if hashedPassword != nil {
-		user, err := db.GetUserByUsername(*username)
-		if err != nil {
-			log.Fatalf("Failed to look up user to revoke sessions: %v", err)
-		}
-		n, err := db.DeleteUserSessions(user.ID, 0)
-		if err != nil {
-			log.Fatalf("Failed to revoke user sessions: %v", err)
-		}
-		fmt.Printf("Revoked %d active session(s)\n", n)
+		fmt.Printf("Revoked %d active session(s)\n", revoked)
 	}
 }
 

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ type fakeSessionRepo struct {
 	nextID   int64
 	sessions map[string]*models.Session // keyed by token hash
 	renews   int
+	getErr   error
 }
 
 func newFakeSessionRepo() *fakeSessionRepo {
@@ -25,7 +27,6 @@ func (f *fakeSessionRepo) CreateSession(userID int64, tokenHash string, createdA
 		ID:         f.nextID,
 		UserID:     userID,
 		Username:   "user",
-		TokenHash:  tokenHash,
 		CreatedAt:  createdAt,
 		LastUsedAt: createdAt,
 		ExpiresAt:  expiresAt,
@@ -34,6 +35,9 @@ func (f *fakeSessionRepo) CreateSession(userID int64, tokenHash string, createdA
 }
 
 func (f *fakeSessionRepo) GetSessionByHash(tokenHash string) (*models.Session, error) {
+	if f.getErr != nil {
+		return nil, f.getErr
+	}
 	s, ok := f.sessions[tokenHash]
 	if !ok {
 		return nil, nil
@@ -99,25 +103,25 @@ func TestSessionStore(t *testing.T) {
 		t.Fatal("Token hash not stored in repository")
 	}
 
-	session, ok := store.Get(token)
-	if !ok {
-		t.Fatal("Get failed to retrieve session")
+	session, err := store.Get(token)
+	if err != nil {
+		t.Fatalf("Get failed to retrieve session: %v", err)
 	}
 	if session.UserID != 1 || session.ID != created.ID {
 		t.Fatalf("Unexpected session: %+v", session)
 	}
 
-	if _, ok := store.Get("invalid-token"); ok {
-		t.Fatal("Get should fail for invalid token")
+	if _, err := store.Get("invalid-token"); !errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("Expected ErrSessionNotFound for invalid token, got %v", err)
 	}
-	if _, ok := store.Get(""); ok {
-		t.Fatal("Get should fail for empty token")
+	if _, err := store.Get(""); !errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("Expected ErrSessionNotFound for empty token, got %v", err)
 	}
 
 	if err := store.Delete(token); err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
-	if _, ok := store.Get(token); ok {
+	if _, err := store.Get(token); !errors.Is(err, ErrSessionNotFound) {
 		t.Fatal("Session should be deleted")
 	}
 }
@@ -137,12 +141,12 @@ func TestSessionStoreUniqueness(t *testing.T) {
 		t.Fatal("Tokens should be unique")
 	}
 
-	s1, ok := store.Get(token1)
-	if !ok || s1.UserID != 1 {
+	s1, err := store.Get(token1)
+	if err != nil || s1.UserID != 1 {
 		t.Fatal("Session 1 data is incorrect")
 	}
-	s2, ok := store.Get(token2)
-	if !ok || s2.UserID != 2 {
+	s2, err := store.Get(token2)
+	if err != nil || s2.UserID != 2 {
 		t.Fatal("Session 2 data is incorrect")
 	}
 }
@@ -156,13 +160,13 @@ func TestSessionStoreExpiry(t *testing.T) {
 	}
 
 	*clock = clock.Add(SessionTTL - time.Second)
-	if _, ok := store.Get(token); !ok {
-		t.Fatal("Session should still be valid just before expiry")
+	if _, err := store.Get(token); err != nil {
+		t.Fatalf("Session should still be valid just before expiry: %v", err)
 	}
 
 	*clock = clock.Add(time.Second)
-	if _, ok := store.Get(token); ok {
-		t.Fatal("Session should be expired at expires_at")
+	if _, err := store.Get(token); !errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("Session should be expired at expires_at, got %v", err)
 	}
 	if len(repo.sessions) != 0 {
 		t.Fatal("Expired session should be deleted on lookup")
@@ -201,8 +205,8 @@ func TestSessionStoreRenew(t *testing.T) {
 
 	// The renewed expiry is persisted: the session survives past the original TTL.
 	*clock = clock.Add(SessionTTL - time.Minute)
-	if _, ok := store.Get(token); !ok {
-		t.Fatal("Renewed session should outlive the original expiry")
+	if _, err := store.Get(token); err != nil {
+		t.Fatalf("Renewed session should outlive the original expiry: %v", err)
 	}
 }
 
@@ -226,8 +230,8 @@ func TestSessionStoreDeleteExpired(t *testing.T) {
 	if n != 1 || len(repo.sessions) != 1 {
 		t.Fatalf("Expected 1 expired session removed, got n=%d remaining=%d", n, len(repo.sessions))
 	}
-	if _, ok := store.Get(fresh); !ok {
-		t.Fatal("Fresh session should remain")
+	if _, err := store.Get(fresh); err != nil {
+		t.Fatalf("Fresh session should remain: %v", err)
 	}
 }
 
@@ -244,5 +248,19 @@ func TestSessionCookies(t *testing.T) {
 	cleared := ClearSessionCookie()
 	if cleared.Name != SessionCookieName || cleared.MaxAge >= 0 || cleared.Value != "" {
 		t.Fatalf("Unexpected clear cookie: %+v", cleared)
+	}
+}
+
+func TestSessionStoreRepoErrorIsNotNotFound(t *testing.T) {
+	store, repo, _ := newTestStore()
+	token, _, err := store.Create(1, "user")
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	repo.getErr = errors.New("database is locked")
+	_, err = store.Get(token)
+	if err == nil || errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("Expected a storage error distinct from ErrSessionNotFound, got %v", err)
 	}
 }

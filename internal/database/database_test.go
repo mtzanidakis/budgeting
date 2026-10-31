@@ -68,7 +68,7 @@ func TestUserCRUD(t *testing.T) {
 
 	// Update user
 	newName := "Updated Name"
-	err = db.UpdateUser("testuser", nil, &newName)
+	_, err = db.UpdateUser("testuser", nil, &newName, 0)
 	if err != nil {
 		t.Fatalf("UpdateUser failed: %v", err)
 	}
@@ -265,10 +265,21 @@ func TestSessions(t *testing.T) {
 		t.Fatalf("Renew not persisted: %+v", s)
 	}
 
-	// Delete all of a user's sessions except the current one.
-	n, err := db.DeleteUserSessions(user.ID, id1)
+	// Name-only update must not touch sessions.
+	newName := "Renamed"
+	n, err := db.UpdateUser("sessuser", nil, &newName, 0)
+	if err != nil || n != 0 {
+		t.Fatalf("Name-only UpdateUser: n=%d err=%v", n, err)
+	}
+	if s, _ := db.GetSessionByHash("hash2"); s == nil {
+		t.Fatal("Name-only update must not revoke sessions")
+	}
+
+	// Password change revokes all of the user's sessions except the current one.
+	newPw, _ := auth.HashPassword("new-password")
+	n, err = db.UpdateUser("sessuser", &newPw, nil, id1)
 	if err != nil || n != 1 {
-		t.Fatalf("DeleteUserSessions: n=%d err=%v", n, err)
+		t.Fatalf("UpdateUser with password: n=%d err=%v", n, err)
 	}
 	if s, _ := db.GetSessionByHash("hash2"); s != nil {
 		t.Fatalf("Session %d should have been revoked", id2)
@@ -306,5 +317,34 @@ func TestSessions(t *testing.T) {
 	}
 	if s, _ := db.GetSessionByHash("hash4"); s != nil {
 		t.Fatal("Sessions should be removed when the user is deleted")
+	}
+}
+
+// TestSessionsSurviveRestart checks the core requirement: a session created by
+// one SessionStore is still valid for a brand-new store on the same database,
+// as happens after a server restart.
+func TestSessionsSurviveRestart(t *testing.T) {
+	db := setupTestDB(t)
+
+	password, _ := auth.HashPassword("test-password")
+	user, err := db.CreateUser("restartuser", password, "Restart User")
+	if err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+
+	token, created, err := auth.NewSessionStore(db).Create(user.ID, user.Username)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	got, err := auth.NewSessionStore(db).Get(token)
+	if err != nil {
+		t.Fatalf("Session lost across store restart: %v", err)
+	}
+	if got.ID != created.ID || got.UserID != user.ID || got.Username != "restartuser" {
+		t.Fatalf("Unexpected session after restart: %+v", got)
+	}
+	if !got.ExpiresAt.Equal(created.ExpiresAt.UTC()) {
+		t.Fatalf("Expiry changed across restart: want %v got %v", created.ExpiresAt.UTC(), got.ExpiresAt)
 	}
 }
