@@ -4,7 +4,7 @@ go 1.27.2
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/go-chi/chi/v5 v5.4.0
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	golang.org/x/crypto v0.58.0
 	golang.org/x/term v0.47.0
