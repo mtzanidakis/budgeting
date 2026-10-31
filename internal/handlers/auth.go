@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/mtzanidakis/budgeting/internal/auth"
@@ -63,8 +64,17 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.sessionStore.Create(user.ID, user.Username)
+	// Drop any session this browser was already carrying so re-logins don't
+	// leave orphaned rows behind until they expire.
+	if old, err := r.Cookie(auth.SessionCookieName); err == nil {
+		if err := h.sessionStore.Delete(old.Value); err != nil {
+			slog.Warn("failed to delete previous session on login", "error", err)
+		}
+	}
+
+	token, session, err := h.sessionStore.Create(user.ID, user.Username)
 	if err != nil {
+		slog.Error("failed to create session", "user_id", user.ID, "error", err)
 		respondJSON(w, http.StatusInternalServerError, LoginResponse{
 			Success: false,
 			Message: "Failed to create session",
@@ -72,15 +82,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
-		SameSite: http.SameSiteStrictMode,
-		MaxAge:   86400 * 7, // 7 days
-	})
+	http.SetCookie(w, auth.NewSessionCookie(token, session.ExpiresAt))
 
 	respondJSON(w, http.StatusOK, LoginResponse{
 		Success: true,
@@ -98,18 +100,21 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session")
-	if err == nil {
-		h.sessionStore.Delete(cookie.Value)
-	}
+	// Always clear the cookie, even if deleting the server-side row fails, so
+	// the browser can't silently resume the session on the next page load.
+	http.SetCookie(w, auth.ClearSessionCookie())
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   -1,
-	})
+	cookie, err := r.Cookie(auth.SessionCookieName)
+	if err == nil {
+		if err := h.sessionStore.Delete(cookie.Value); err != nil {
+			slog.Error("failed to delete session on logout", "error", err)
+			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
+				"success": false,
+				"message": "Failed to log out",
+			})
+			return
+		}
+	}
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,

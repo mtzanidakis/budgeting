@@ -28,12 +28,12 @@ cmd/server/frontend/ Static assets: HTML template, CSS, vanilla JS, PWA manifest
 cmd/admin/           Admin CLI (user:* and token:* commands, direct DB access)
 cmd/budgeting-cli/   HTTP client (no CGO) for scripts/AI agents, uses API tokens
 internal/apiclient/  HTTP client library used by budgeting-cli
-internal/auth/       Password hashing (bcrypt), session store, API token helpers (SHA-256)
+internal/auth/       Password hashing (bcrypt), DB-backed session store + cookie helpers, API token helpers (SHA-256)
 internal/config/     Env var config via caarlos0/env
 internal/database/   SQLite3 operations, schema migrations, query builders
 internal/handlers/   HTTP handlers (auth, actions, categories, users, tokens, config, static)
 internal/middleware/  Auth (session + Bearer) + logging middleware, RequireSessionAuth guard
-internal/models/     Data structs (User, Action, Category, APIToken, ActionType)
+internal/models/     Data structs (User, Action, Category, APIToken, Session, ActionType)
 internal/version/    Build-time version injection
 skill/SKILL.md       Claude Code skill bundled with budgeting-cli release archives
 ```
@@ -48,7 +48,7 @@ skill/SKILL.md       Claude Code skill bundled with budgeting-cli release archiv
 - **Frontend state**: Single global `state` object, `render()` rebuilds the DOM
 - **i18n**: Translation keys in `i18n.js`, accessed via `t('key.name')`; two locales: `en`, `el`
 - **Dates**: Display as DD/MM/YYYY, API format YYYY-MM-DD
-- **Sessions**: In-memory (lost on server restart), HTTP-only cookie, SameSite=Strict
+- **Sessions**: Persisted in SQLite `sessions` table (SHA-256 hash of the cookie token, survive restarts), 30-day sliding expiry renewed at most hourly, HTTP-only cookie, SameSite=Strict. Password change revokes the user's other sessions; expired rows are purged hourly
 - **API tokens**: `bdg_` prefix, SHA-256 hash stored, soft-deleted on revoke, throttled `last_used_at`
 - **Auth middleware**: accepts session cookie OR `Authorization: Bearer bdg_...`. `RequireSessionAuth()` guards token-management endpoints so tokens cannot manage other tokens.
 
@@ -63,7 +63,7 @@ skill/SKILL.md       Claude Code skill bundled with budgeting-cli release archiv
 ## Database
 
 SQLite3 with foreign keys enabled. Custom `LOWER_UNICODE()` function registered for Greek text search.
-Tables: `users`, `categories`, `actions`, `api_tokens`. Category is required on actions.
+Tables: `users`, `categories`, `actions`, `api_tokens`, `sessions`. Category is required on actions.
 `api_tokens` uses soft-delete (`deleted_at`) and supports optional `expires_at`.
 
 ## Docker

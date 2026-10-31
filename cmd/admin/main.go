@@ -170,11 +170,15 @@ func handleUserEdit(db *database.DB) {
 		os.Exit(0)
 	}
 
-	if err := db.UpdateUser(*username, hashedPassword, newName); err != nil {
+	revoked, err := db.UpdateUser(*username, hashedPassword, newName, 0)
+	if err != nil {
 		log.Fatalf("Failed to update user: %v", err)
 	}
 
 	fmt.Println("User updated successfully")
+	if hashedPassword != nil {
+		fmt.Printf("Revoked %d active session(s)\n", revoked)
+	}
 }
 
 func handleUserDelete(db *database.DB) {

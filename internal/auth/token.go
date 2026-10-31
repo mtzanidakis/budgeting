@@ -26,6 +26,11 @@ func GenerateAPIToken() (raw, hash string, err error) {
 
 // HashAPIToken returns the hex-encoded SHA-256 of the raw token.
 func HashAPIToken(raw string) string {
+	return hashToken(raw)
+}
+
+// hashToken returns the hex-encoded SHA-256 of a raw secret token.
+func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
 }

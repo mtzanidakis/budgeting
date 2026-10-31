@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mtzanidakis/budgeting/internal/auth"
@@ -47,8 +49,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize session store
-	sessionStore := auth.NewSessionStore()
+	// Initialize persistent session store and periodic cleanup of expired sessions
+	sessionStore := auth.NewSessionStore(db)
+	go sessionStore.RunCleanup(context.Background(), time.Hour)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, sessionStore)

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -155,7 +156,11 @@ func (h *UsersHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update user in database
-	if err := h.db.UpdateUser(session.Username, passwordPtr, namePtr); err != nil {
+	// A password change also logs out every other session of this user, in the
+	// same transaction. The current session (ID is 0 for API-token requests,
+	// which revokes all browser sessions) stays valid.
+	if _, err := h.db.UpdateUser(session.Username, passwordPtr, namePtr, session.ID); err != nil {
+		slog.Error("failed to update profile", "user_id", user.ID, "error", err)
 		respondJSON(w, http.StatusInternalServerError, UpdateProfileResponse{
 			Success: false,
 			Message: "Failed to update profile",
