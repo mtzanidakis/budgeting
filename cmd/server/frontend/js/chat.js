@@ -130,12 +130,10 @@ function renderChat() {
                           placeholder="${escapeHTMLAttr(t('chat.placeholder'))}"
                           onkeydown="chatInputKeydown(event)" oninput="chatAutoGrow(this)"></textarea>
                 <div class="chat-form-actions">
-                    <div class="chat-form-tools">
-                        <button type="button" class="chat-icon-btn" onclick="document.getElementById('chat-file-input').click()"
-                                aria-label="${escapeHTMLAttr(t('chat.attach'))}" title="${escapeHTMLAttr(t('chat.attach'))}">📎</button>
-                        <button type="button" class="chat-icon-btn chat-camera-btn" onclick="document.getElementById('chat-camera-input').click()"
-                                aria-label="${escapeHTMLAttr(t('chat.camera'))}" title="${escapeHTMLAttr(t('chat.camera'))}">📷</button>
-                    </div>
+                    <button type="button" class="chat-icon-btn chat-camera-btn" onclick="document.getElementById('chat-camera-input').click()"
+                            aria-label="${escapeHTMLAttr(t('chat.camera'))}" title="${escapeHTMLAttr(t('chat.camera'))}">📷</button>
+                    <button type="button" class="chat-icon-btn" onclick="document.getElementById('chat-file-input').click()"
+                            aria-label="${escapeHTMLAttr(t('chat.attach'))}" title="${escapeHTMLAttr(t('chat.attach'))}">📎</button>
                     <button type="submit" id="chat-send-btn" class="btn btn-primary chat-send-btn"></button>
                 </div>
             </form>
