@@ -29,8 +29,8 @@ FROM alpine:latest
 
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apk add --no-cache ca-certificates sqlite-libs
+# Install runtime dependencies (tzdata so the TZ env var takes effect)
+RUN apk add --no-cache ca-certificates sqlite-libs tzdata
 
 # Copy binaries from builder
 COPY --from=builder /app/server /app/server
