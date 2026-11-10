@@ -27,11 +27,12 @@ cmd/server/          Main HTTP server (Chi router), embeds frontend/
 cmd/server/frontend/ Static assets: HTML template, CSS, vanilla JS, PWA manifest
 cmd/admin/           Admin CLI (user:* and token:* commands, direct DB access)
 cmd/budgeting-cli/   HTTP client (no CGO) for scripts/AI agents, uses API tokens
+internal/ai/         OpenAI-compatible streaming chat client + tool-calling loop (stdlib only)
 internal/apiclient/  HTTP client library used by budgeting-cli
 internal/auth/       Password hashing (bcrypt), DB-backed session store + cookie helpers, API token helpers (SHA-256)
 internal/config/     Env var config via caarlos0/env
 internal/database/   SQLite3 operations, schema migrations, query builders
-internal/handlers/   HTTP handlers (auth, actions, categories, users, tokens, config, static)
+internal/handlers/   HTTP handlers (auth, actions, categories, users, tokens, config, static, chat)
 internal/middleware/  Auth (session + Bearer) + logging middleware, RequireSessionAuth guard
 internal/models/     Data structs (User, Action, Category, APIToken, Session, ActionType)
 internal/version/    Build-time version injection
@@ -51,6 +52,7 @@ skill/SKILL.md       Claude Code skill bundled with budgeting-cli release archiv
 - **Sessions**: Persisted in SQLite `sessions` table (SHA-256 hash of the cookie token, survive restarts), 30-day sliding expiry renewed at most hourly, HTTP-only cookie, SameSite=Strict. Password change revokes the user's other sessions; expired rows are purged hourly
 - **API tokens**: `bdg_` prefix, SHA-256 hash stored, soft-deleted on revoke, throttled `last_used_at`
 - **Auth middleware**: accepts session cookie OR `Authorization: Bearer bdg_...`. `RequireSessionAuth()` guards token-management endpoints so tokens cannot manage other tokens.
+- **AI chat** (optional, `AI_CHAT_ENABLED`): `POST /api/chat` (session-only) streams SSE events (`delta`, `tool`, `action`, `error`, `done`). The model works only through the tools in `handlers/chat_tools.go` (`summarize_actions`, `search_actions`, `create_action` — read + create for the session user, no edit/delete). Server is stateless: the browser keeps the conversation in `sessionStorage` and resends it. Frontend lives in `js/chat.js` and renders into `#chat-root`, outside `#app`, so `render()` does not reset it.
 
 ## Environment Variables
 
@@ -59,6 +61,8 @@ skill/SKILL.md       Claude Code skill bundled with budgeting-cli release archiv
 - `DATABASE_PATH` — default `./data/budgeting.db`
 - `LOG_LEVEL` — default `info`
 - `CURRENCY` — default `€`
+- `AI_CHAT_ENABLED` — default `false`; when `true`, `OPENAI_API_KEY` and `OPENAI_MODEL` are required
+- `OPENAI_BASE_URL` — default `https://api.openai.com/v1` (any OpenAI-compatible chat completions API)
 
 ## Database
 

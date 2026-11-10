@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/mtzanidakis/budgeting/internal/ai"
 	"github.com/mtzanidakis/budgeting/internal/auth"
 	"github.com/mtzanidakis/budgeting/internal/config"
 	"github.com/mtzanidakis/budgeting/internal/database"
@@ -59,7 +60,7 @@ func main() {
 	usersHandler := handlers.NewUsersHandler(db)
 	categoriesHandler := handlers.NewCategoriesHandler(db)
 	tokensHandler := handlers.NewTokensHandler(db)
-	configHandler := handlers.NewConfigHandler(cfg.Currency)
+	configHandler := handlers.NewConfigHandler(cfg.Currency, cfg.AIChatEnabled)
 	staticHandler, err := handlers.NewStaticHandler(staticFiles)
 	if err != nil {
 		logger.Error("Failed to initialize static handler", "error", err)
@@ -95,9 +96,14 @@ func main() {
 		r.Put("/api/categories/{id}", categoriesHandler.Update)
 		r.Delete("/api/categories/{id}", categoriesHandler.Delete)
 
-		// Token management — session-only (API tokens cannot manage tokens).
+		// Session-only endpoints: token management (API tokens cannot manage
+		// tokens) and the optional AI chat (interactive use only).
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireSessionAuth())
+			if cfg.AIChatEnabled {
+				chatHandler := handlers.NewChatHandler(db, ai.NewClient(cfg.OpenAIBaseURL, cfg.OpenAIAPIKey, cfg.OpenAIModel), cfg.Currency)
+				r.Post("/api/chat", chatHandler.Chat)
+			}
 			r.Get("/api/tokens", tokensHandler.List)
 			r.Post("/api/tokens", tokensHandler.Create)
 			r.Delete("/api/tokens/{id}", tokensHandler.Delete)

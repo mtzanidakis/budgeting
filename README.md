@@ -19,6 +19,13 @@ installable on mobile, scriptable from the command line and from AI agents.
 - Monthly income vs. expense bar chart for any year
 - Category breakdown (expenses + income) for any month, per user or aggregate
 
+**AI assistant** (optional)
+- Chat sidebar that answers questions about your income and expenses
+  ("how much did we spend on groceries this month?") and adds entries on request
+- Send or take a photo of a receipt and it is recorded as an expense
+- Works with any OpenAI-compatible API; off unless enabled — see
+  [AI assistant](#ai-assistant)
+
 **Multi-user**
 - Family / team use with per-user ownership of entries
 - Shared categories across users
@@ -115,6 +122,46 @@ its Tailscale state under `./config/tsrp/`.
 | `DATABASE_PATH`   | no       | `./data/budgeting.db`    | SQLite file path                        |
 | `LOG_LEVEL`       | no       | `info`                   | `debug` / `info` / `warn` / `error`     |
 | `CURRENCY`        | no       | `€`                      | Currency symbol displayed in the UI     |
+| `AI_CHAT_ENABLED` | no       | `false`                  | Enable the AI assistant sidebar         |
+| `OPENAI_BASE_URL` | no       | `https://api.openai.com/v1` | Base URL of an OpenAI-compatible API |
+| `OPENAI_API_KEY`  | with AI  | —                        | API key for that endpoint               |
+| `OPENAI_MODEL`    | with AI  | —                        | Model ID to use                         |
+
+## AI assistant
+
+Set `AI_CHAT_ENABLED=true` together with `OPENAI_API_KEY` and `OPENAI_MODEL`
+(and `OPENAI_BASE_URL` for anything other than OpenAI) to add an assistant
+sidebar to the web UI, opened from the 💬 button in the header. The server
+refuses to start if it is enabled without a key and model.
+
+```bash
+# Example: OpenCode Go
+AI_CHAT_ENABLED=true
+OPENAI_BASE_URL=https://opencode.ai/inference/go/openai/v1
+OPENAI_API_KEY=...
+OPENAI_MODEL=deepseek-v4.1-flash
+```
+
+The endpoint must speak the chat completions API with streaming and tool
+calling; receipt photos additionally need a model with image input.
+
+How it works:
+
+- The model never touches the database. It calls three server-side tools:
+  `summarize_actions` (totals computed in SQL), `search_actions` (list entries)
+  and `create_action`. It cannot edit or delete anything.
+- It sees what the signed-in user sees — the whole family's entries — and
+  creates entries only for that user. Each created entry is shown as a card
+  with an **Undo** button.
+- Photos are downscaled in the browser before upload and are not stored.
+- The conversation lives in the browser's `sessionStorage` (per tab, cleared on
+  logout); the server keeps no chat history.
+- `POST /api/chat` accepts session cookies only, not API tokens, and replies
+  with a server-sent event stream.
+
+**Privacy:** questions, photos, and the entries the model looks up
+(descriptions, amounts, dates, usernames, category names) are sent to the
+configured provider. Leave the feature off if that is not acceptable.
 
 ## Admin CLI
 
@@ -286,6 +333,7 @@ cmd/
   admin/             Admin CLI (direct DB access, user + token management)
   budgeting-cli/     HTTP client for scripts and AI agents
 internal/
+  ai/                OpenAI-compatible streaming client + tool-calling loop
   apiclient/         HTTP client library used by budgeting-cli
   auth/              Password hashing, session store, API token helpers
   config/            Env-based configuration
