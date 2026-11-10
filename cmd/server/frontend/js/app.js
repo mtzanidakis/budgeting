@@ -521,7 +521,7 @@ function Header() {
                     </button>
                     <div class="user-menu">
                         <button onclick="toggleUserMenu()" class="user-menu-trigger">
-                            <span>${state.user?.name || 'User'}</span>
+                            <span>${escapeHTML(state.user?.name || 'User')}</span>
                             <span>▼</span>
                         </button>
                         <div id="user-menu" class="user-menu-dropdown hidden">
@@ -547,7 +547,7 @@ function Header() {
             <div class="mobile-menu ${state.mobileMenuOpen ? 'open' : ''}" onclick="closeMobileMenuOnOverlay(event)">
                 <div class="mobile-menu-content" onclick="event.stopPropagation()">
                     <div class="mobile-menu-header">
-                        <h2>${state.user?.name || 'User'}</h2>
+                        <h2>${escapeHTML(state.user?.name || 'User')}</h2>
                         <button class="mobile-menu-close" onclick="toggleMobileMenu()">&times;</button>
                     </div>
                     <nav class="mobile-menu-nav">
@@ -649,7 +649,7 @@ function MonthFilter() {
         <div class="form-group mb-4">
             <label>${t('filters.search')}</label>
             <input type="text"
-                   value="${state.allActionsPage.filters.search}"
+                   value="${escapeHTMLAttr(state.allActionsPage.filters.search)}"
                    oninput="updateAllActionsSearch(this.value)"
                    class="input"
                    placeholder="${t('filters.search_placeholder')}" />
@@ -687,7 +687,7 @@ function CustomRangeFilters() {
         <div class="form-group mb-4">
             <label>${t('filters.search')}</label>
             <input type="text"
-                   value="${state.allActionsPage.filters.search}"
+                   value="${escapeHTMLAttr(state.allActionsPage.filters.search)}"
                    oninput="updateAllActionsSearch(this.value)"
                    class="input"
                    placeholder="${t('filters.search_placeholder')}" />
@@ -728,7 +728,7 @@ function UserAndTypeFilters(context) {
             <select onchange="${updateFn}('username', this.value)" class="input">
                 <option value="">${t('filters.all_users')}</option>
                 ${state.users.map(u => `
-                    <option value="${u.username}" ${filters.username === u.username ? 'selected' : ''}>${u.name}</option>
+                    <option value="${escapeHTMLAttr(u.username)}" ${filters.username === u.username ? 'selected' : ''}>${escapeHTML(u.name)}</option>
                 `).join('')}
             </select>
         </div>
@@ -775,10 +775,10 @@ function AllActionsTable() {
                             return `
                             <tr class="${action.user_id === state.user.id ? 'action-row-editable' : ''}" ${action.user_id === state.user.id ? `onclick="openEditActionModal(${action.id})"` : ''}>
                                 <td>${formatDateForDisplay(action.date)}</td>
-                                <td>${action.name}</td>
+                                <td>${escapeHTML(action.name)}</td>
                                 <td><span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">${action.type === 'income' ? t('filters.income') : t('filters.expense')}</span></td>
-                                <td>${action.description}</td>
-                                <td>${category ? category.description : '-'}</td>
+                                <td>${escapeHTML(action.description)}</td>
+                                <td>${category ? escapeHTML(category.description) : '-'}</td>
                                 <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
                                     ${action.type === 'income' ? '+' : '-'}${state.currency}${action.amount.toFixed(2)}
                                 </td>
@@ -871,7 +871,7 @@ function ChartsFilters() {
                     <select onchange="updateChartUsername(this.value)" class="input">
                         <option value="">${t('filters.all_users')}</option>
                         ${state.users.map(u => `
-                            <option value="${u.username}" ${state.chartsPage.username === u.username ? 'selected' : ''}>${u.name}</option>
+                            <option value="${escapeHTMLAttr(u.username)}" ${state.chartsPage.username === u.username ? 'selected' : ''}>${escapeHTML(u.name)}</option>
                         `).join('')}
                     </select>
                 </div>
@@ -967,7 +967,7 @@ function CategoriesTable() {
                     <tbody>
                         ${categories.map(category => `
                             <tr class="action-row-editable" onclick="openEditCategoryModal(${category.id})">
-                                <td>${category.description}</td>
+                                <td>${escapeHTML(category.description)}</td>
                                 <td><span class="badge ${category.action_type === 'income' ? 'badge-success' : 'badge-danger'}">${category.action_type === 'income' ? t('filters.income') : t('filters.expense')}</span></td>
                             </tr>
                         `).join('')}
@@ -1029,7 +1029,7 @@ function EditCategoryModal() {
                     </div>
                     <div class="form-group">
                         <label>${t('categories.description')}</label>
-                        <input type="text" id="edit-category-description" value="${category.description}" class="input" required>
+                        <input type="text" id="edit-category-description" value="${escapeHTMLAttr(category.description)}" class="input" required>
                     </div>
                     <div class="modal-actions">
                         <button type="submit" class="btn btn-primary">${t('modal.save')}</button>
@@ -1058,7 +1058,7 @@ function ProfilePage() {
                                 <div class="form-group">
                                     <label>${t('profile.username')}</label>
                                     <input type="text"
-                                           value="${state.user?.username || ''}"
+                                           value="${escapeHTMLAttr(state.user?.username || '')}"
                                            class="input"
                                            disabled
                                            style="opacity: 0.6; cursor: not-allowed;">
@@ -1069,7 +1069,7 @@ function ProfilePage() {
                                     <label>${t('profile.name')} <span style="color: var(--danger);">*</span></label>
                                     <input type="text"
                                            id="profile-name"
-                                           value="${state.user?.name || ''}"
+                                           value="${escapeHTMLAttr(state.user?.name || '')}"
                                            class="input"
                                            required
                                            maxlength="100">
@@ -1145,7 +1145,7 @@ function InlineMessage(message) {
     return `
         <div class="inline-message ${typeClass}">
             <span class="message-icon">${icon}</span>
-            <span class="message-text">${message.text}</span>
+            <span class="message-text">${escapeHTML(message.text)}</span>
             <button onclick="dismissMessage()" class="message-dismiss" type="button">×</button>
         </div>
     `;
@@ -1664,14 +1664,14 @@ function ActionsList() {
                             return `
                             <tr class="${action.user_id === state.user.id ? 'action-row-editable' : ''}" ${action.user_id === state.user.id ? `onclick="openEditActionModal(${action.id})"` : ''}>
                                 <td>${formatDateForDisplay(action.date)}</td>
-                                <td>${action.name}</td>
+                                <td>${escapeHTML(action.name)}</td>
                                 <td>
                                     <span class="badge ${action.type === 'income' ? 'badge-success' : 'badge-danger'}">
                                         ${action.type === 'income' ? t('filters.income') : t('filters.expense')}
                                     </span>
                                 </td>
-                                <td>${action.description}</td>
-                                <td>${category ? category.description : '-'}</td>
+                                <td>${escapeHTML(action.description)}</td>
+                                <td>${category ? escapeHTML(category.description) : '-'}</td>
                                 <td class="text-right ${action.type === 'income' ? 'amount-success' : 'amount-danger'}">
                                     ${action.type === 'income' ? '+' : '-'}${state.currency}${action.amount.toFixed(2)}
                                 </td>
@@ -1712,7 +1712,7 @@ function AddActionModal() {
                         <label>${t('categories.category')}</label>
                         <select id="action-category" class="input" required oninvalid="this.setCustomValidity(t('categories.category_required'))" oninput="this.setCustomValidity('')">
                             <option value="">—</option>
-                            ${expenseCategories.map(c => `<option value="${c.id}">${c.description}</option>`).join('')}
+                            ${expenseCategories.map(c => `<option value="${c.id}">${escapeHTML(c.description)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group">
@@ -1763,7 +1763,7 @@ function EditActionModal() {
                         <label>${t('categories.category')}</label>
                         <select id="edit-action-category" class="input" required oninvalid="this.setCustomValidity(t('categories.category_required'))" oninput="this.setCustomValidity('')">
                             <option value="">—</option>
-                            ${actionCategories.map(c => `<option value="${c.id}" ${action.category_id === c.id ? 'selected' : ''}>${c.description}</option>`).join('')}
+                            ${actionCategories.map(c => `<option value="${c.id}" ${action.category_id === c.id ? 'selected' : ''}>${escapeHTML(c.description)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group">
@@ -1772,7 +1772,7 @@ function EditActionModal() {
                     </div>
                     <div class="form-group">
                         <label>${t('modal.description')}</label>
-                        <input type="text" id="edit-action-description" value="${action.description}" class="input" required>
+                        <input type="text" id="edit-action-description" value="${escapeHTMLAttr(action.description)}" class="input" required>
                     </div>
                     <div class="form-group">
                         <label>${t('modal.amount')}</label>
@@ -1803,7 +1803,7 @@ function updateActionTypeCategories() {
     const categories = state.categories.filter(c => c.action_type === actionType);
 
     categorySelect.innerHTML = `<option value="">—</option>` +
-        categories.map(c => `<option value="${c.id}">${c.description}</option>`).join('');
+        categories.map(c => `<option value="${c.id}">${escapeHTML(c.description)}</option>`).join('');
 }
 
 function updateEditActionTypeCategories() {
@@ -1812,7 +1812,7 @@ function updateEditActionTypeCategories() {
     const categories = state.categories.filter(c => c.action_type === actionType);
 
     categorySelect.innerHTML = `<option value="">—</option>` +
-        categories.map(c => `<option value="${c.id}">${c.description}</option>`).join('');
+        categories.map(c => `<option value="${c.id}">${escapeHTML(c.description)}</option>`).join('');
 }
 
 async function handleAddAction(event) {
