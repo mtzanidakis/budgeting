@@ -6,6 +6,7 @@ const CHAT_MAX_IMAGES = 3;
 const CHAT_IMAGE_MAX_DIMENSION = 1600;
 const CHAT_HISTORY_LIMIT = 30;
 const CHAT_MESSAGE_MAX_CHARS = 8000;
+const CHAT_INPUT_MAX_HEIGHT = 200; // px; keep in sync with .chat-input max-height
 
 // A message is { role: 'user' | 'assistant', content, images?, imageCount?,
 // actions?, error? }. Image data lives in memory only; sessionStorage keeps
@@ -125,14 +126,18 @@ function renderChat() {
             <form class="chat-form" onsubmit="chatSubmit(event)">
                 <input type="file" id="chat-file-input" accept="image/*" multiple hidden onchange="chatAddFiles(this)">
                 <input type="file" id="chat-camera-input" accept="image/*" capture="environment" hidden onchange="chatAddFiles(this)">
-                <button type="button" class="chat-icon-btn chat-camera-btn" onclick="document.getElementById('chat-camera-input').click()"
-                        aria-label="${escapeHTMLAttr(t('chat.camera'))}" title="${escapeHTMLAttr(t('chat.camera'))}">📷</button>
-                <button type="button" class="chat-icon-btn" onclick="document.getElementById('chat-file-input').click()"
-                        aria-label="${escapeHTMLAttr(t('chat.attach'))}" title="${escapeHTMLAttr(t('chat.attach'))}">📎</button>
-                <textarea id="chat-input" class="input chat-input" rows="1" maxlength="${CHAT_MESSAGE_MAX_CHARS}"
+                <textarea id="chat-input" class="input chat-input" rows="2" maxlength="${CHAT_MESSAGE_MAX_CHARS}"
                           placeholder="${escapeHTMLAttr(t('chat.placeholder'))}"
                           onkeydown="chatInputKeydown(event)" oninput="chatAutoGrow(this)"></textarea>
-                <button type="submit" id="chat-send-btn" class="btn btn-primary chat-send-btn"></button>
+                <div class="chat-form-actions">
+                    <div class="chat-form-tools">
+                        <button type="button" class="chat-icon-btn" onclick="document.getElementById('chat-file-input').click()"
+                                aria-label="${escapeHTMLAttr(t('chat.attach'))}" title="${escapeHTMLAttr(t('chat.attach'))}">📎</button>
+                        <button type="button" class="chat-icon-btn chat-camera-btn" onclick="document.getElementById('chat-camera-input').click()"
+                                aria-label="${escapeHTMLAttr(t('chat.camera'))}" title="${escapeHTMLAttr(t('chat.camera'))}">📷</button>
+                    </div>
+                    <button type="submit" id="chat-send-btn" class="btn btn-primary chat-send-btn"></button>
+                </div>
             </form>
         </aside>
     `;
@@ -302,8 +307,8 @@ function chatAutoGrow(textarea) {
     // scrollHeight excludes the 1px borders of the border-box textarea.
     textarea.style.height = 'auto';
     const height = textarea.scrollHeight + 2;
-    textarea.style.height = Math.min(height, 140) + 'px';
-    textarea.style.overflowY = height > 140 ? 'auto' : 'hidden';
+    textarea.style.height = Math.min(height, CHAT_INPUT_MAX_HEIGHT) + 'px';
+    textarea.style.overflowY = height > CHAT_INPUT_MAX_HEIGHT ? 'auto' : 'hidden';
 }
 
 function chatInputKeydown(event) {
