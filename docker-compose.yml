@@ -8,5 +8,10 @@ services:
       - DATABASE_PATH=/data/budgeting.db
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
       - LOG_LEVEL=info
+      # Optional AI chat sidebar (see README)
+      - AI_CHAT_ENABLED=${AI_CHAT_ENABLED:-false}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-}
     volumes:
       - ./data:/data

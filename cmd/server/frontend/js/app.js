@@ -7,6 +7,7 @@ const state = {
     categories: [],
     theme: localStorage.getItem('theme') || 'light',
     currency: '€',
+    aiChatEnabled: false,
     currentPage: 'dashboard',
     allActionsPage: {
         actions: [],
@@ -302,6 +303,7 @@ async function logout() {
     state.user = null;
     state.actions = [];
     state.users = [];
+    chatReset();
     render();
 }
 
@@ -399,6 +401,7 @@ async function loadConfig() {
     if (data && data.currency) {
         state.currency = data.currency;
     }
+    state.aiChatEnabled = !!(data && data.ai_chat_enabled);
 }
 
 async function createAction(actionData) {
@@ -479,6 +482,14 @@ function LoginPage() {
     `;
 }
 
+// Opens the AI chat sidebar; rendered only when the server has it enabled.
+function ChatToggleButton() {
+    if (!state.aiChatEnabled) return '';
+    return `
+        <button onclick="toggleChat()" class="icon-btn" aria-label="${escapeHTMLAttr(t('nav.assistant'))}">💬</button>
+    `;
+}
+
 function Header() {
     return `
         <header>
@@ -499,6 +510,7 @@ function Header() {
                        class="nav-link ${state.currentPage === 'charts' ? 'active' : ''}">
                         ${t('nav.charts')}
                     </a>
+                    ${ChatToggleButton()}
                     <button onclick="toggleTheme()" class="icon-btn">
                         ${state.theme === 'light' ? '🌙' : '☀️'}
                     </button>
@@ -520,12 +532,15 @@ function Header() {
                     </div>
                 </div>
 
-                <!-- Mobile Burger Menu -->
-                <button class="burger-menu-btn" onclick="toggleMobileMenu()">
-                    <span class="burger-line"></span>
-                    <span class="burger-line"></span>
-                    <span class="burger-line"></span>
-                </button>
+                <!-- Mobile: assistant toggle + burger menu -->
+                <div class="mobile-header-actions">
+                    ${ChatToggleButton()}
+                    <button class="burger-menu-btn" onclick="toggleMobileMenu()">
+                        <span class="burger-line"></span>
+                        <span class="burger-line"></span>
+                        <span class="burger-line"></span>
+                    </button>
+                </div>
             </div>
 
             <!-- Mobile Menu Overlay -->
@@ -2305,6 +2320,7 @@ function render() {
             app.innerHTML = Dashboard();
         }
     }
+    renderChat();
     applyTheme();
 }
 
